@@ -9,16 +9,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // --- PALET WARNA "BIRU CERAH & SEGAR" ---
-  final Color primaryBlue = const Color(0xFF2D5972); // Biru tua logo
-  final Color bgColor = const Color(0xFFF0F9FF);     // Background biru sangat muda
+  final Color primaryBlue = const Color(0xFF2D5972);
+  final Color bgColor = const Color(0xFFF0F9FF);
   
   // Warna Aksen yang Matching dengan Biru
-  final Color skyBlue = const Color(0xFF38BDF8);     // Biru langit cerah
-  final Color tealMint = const Color(0xFF2DD4BF);    // Tosca/Mint segar
-  final Color goldenYellow = const Color(0xFFFBBF24); // Kuning keemasan
-  final Color deepCyan = const Color(0xFF06B6D4);    // Cyan tua
-  // ------------------------------------------
+  final Color skyBlue = const Color(0xFF38BDF8);
+  final Color tealMint = const Color(0xFF2DD4BF);
+  final Color goldenYellow = const Color(0xFFFBBF24);
+  final Color deepCyan = const Color(0xFF06B6D4);
 
   final List<String> _motivationQuotes = [
     "Meow! Mata lelah butuh rehat sejenak, yuk istirahatkan pandanganmu. 🐾",
@@ -53,19 +51,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: bgColor,
-      // --- APP BAR YANG SUDAH DIPERCANTIK ---
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Logo Kucing
             Image.asset(
               'assets/images/logofinish.png',
               height: 38,
               width: 38,
             ),
             const SizedBox(width: 10),
-            // Tulisan MengJeda
             const Text(
               'MengJeda',
               style: TextStyle(
@@ -78,24 +73,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         elevation: 0,
-        // Menggunakan warna background yang sama dengan body agar menyatu
-        backgroundColor: bgColor, 
-        // Atau jika ingin putih bersih dengan bayangan tipis:
-        // backgroundColor: Colors.white,
-        // shadowColor: Colors.black.withValues(alpha: 0.05),
-        // surfaceTintColor: Colors.transparent,
+        backgroundColor: bgColor,
         
         actions: [
-          // Ikon Settings di Kanan (Bukan Paw lagi)
           IconButton(
-            icon: const Icon(Icons.settings_rounded), // Ikon setting bulat
-            color: skyBlue, // Warna biru langit
+            icon: const Icon(Icons.settings_rounded),
+            color: skyBlue,
             iconSize: 26,
             onPressed: () {
-              // Aksi ketika tombol settings ditekan
             },
           ),
-          const SizedBox(width: 8), // Sedikit jarak dari tepi kanan
+          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -103,7 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Card Motivasi dengan Telinga Kucing ---
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -270,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 12),
             
-            // --- Grid Action Cards (Variasi Warna Cerah) ---
+            // --- Grid Action Cards ---
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -315,7 +302,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // Widget khusus untuk membuat telinga kucing
   Widget _buildEar(Color color) {
     return Container(
       width: 20,
