@@ -241,7 +241,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
 
             const Text(
-              'Aktivitas & Kustomisasi',
+              'Fitur MengJeda',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
@@ -258,7 +258,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.photo_library_outlined,
                   color: AppColors.deepCyan,
                   title: 'Media Kustom',
-                  subtitle: 'Foto/GIF Jeda',
+                  subtitle: 'sesuaikan bentuk notif jeda',
                   onTap: () {},
                 ),
                 _buildActionCard(
@@ -277,7 +277,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.calendar_today_outlined,
                   color: AppColors.tealMint,
                   title: 'Jadwal Aktivitas',
-                  subtitle: 'Makan/Olahraga',
+                  subtitle: 'kelola jadwal aktivitas',
                   onTap: () {
                     Navigator.push(
                       context,
@@ -289,7 +289,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: Icons.bar_chart_rounded,
                   color: AppColors.skyBlue,
                   title: 'Statistik Penuh',
-                  subtitle: 'Riwayat Jeda',
+                  subtitle: 'Lihat Riwayat Jeda',
                   onTap: () {},
                 ),
               ],
