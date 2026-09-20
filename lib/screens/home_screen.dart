@@ -1,5 +1,8 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../theme/app_colors.dart';
+import 'alarm_list_screen.dart';
+import 'jadwal_list_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -9,15 +12,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final Color primaryBlue = const Color(0xFF2D5972);
-  final Color bgColor = const Color(0xFFF0F9FF);
-  
-  // Warna Aksen yang Matching dengan Biru
-  final Color skyBlue = const Color(0xFF38BDF8);
-  final Color tealMint = const Color(0xFF2DD4BF);
-  final Color goldenYellow = const Color(0xFFFBBF24);
-  final Color deepCyan = const Color(0xFF06B6D4);
-
   final List<String> _motivationQuotes = [
     "Meow! Mata lelah butuh rehat sejenak, yuk istirahatkan pandanganmu. 🐾",
     "Postur tubuhmu sudah tegak belum? Regangkan pundakmu dulu seperti kucing meregang! 🐈",
@@ -50,7 +44,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final progress = (_screenTimeMinutes / _targetDailyMinutes).clamp(0.0, 1.0);
 
     return Scaffold(
-      backgroundColor: bgColor,
+      backgroundColor: AppColors.bgColor,
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -67,21 +61,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 fontWeight: FontWeight.w800,
                 fontSize: 22,
                 letterSpacing: 1.2,
-                color: Color(0xFF2D5972), // Warna biru tua logo
+                color: AppColors.primaryBlue,
               ),
             ),
           ],
         ),
         elevation: 0,
-        backgroundColor: bgColor,
-        
+        backgroundColor: AppColors.bgColor,
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_rounded),
-            color: skyBlue,
+            color: AppColors.skyBlue,
             iconSize: 26,
-            onPressed: () {
-            },
+            onPressed: () {},
           ),
           const SizedBox(width: 8),
         ],
@@ -100,10 +92,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: skyBlue.withValues(alpha: 0.3), width: 2),
+                    border: Border.all(color: AppColors.skyBlue.withValues(alpha: 0.3), width: 2),
                     boxShadow: [
                       BoxShadow(
-                        color: skyBlue.withValues(alpha: 0.1),
+                        color: AppColors.skyBlue.withValues(alpha: 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -111,18 +103,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.auto_awesome, color: skyBlue, size: 28),
+                      Icon(Icons.auto_awesome, color: AppColors.skyBlue, size: 28),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            const Text(
                               'Pesan Jeda Hari Ini',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: skyBlue,
+                                color: AppColors.skyBlue,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -130,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               _activeMotivation,
                               style: TextStyle(
                                 fontSize: 14,
-                                color: primaryBlue.withValues(alpha: 0.9),
+                                color: AppColors.primaryBlue.withValues(alpha: 0.9),
                                 height: 1.4,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -140,21 +132,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.refresh, size: 20),
-                        color: skyBlue,
+                        color: AppColors.skyBlue,
                         onPressed: _pickRandomMotivation,
                       ),
                     ],
                   ),
                 ),
-                // Hiasan Telinga Kucing
                 Positioned(
                   top: 0,
                   left: 20,
                   child: Row(
                     children: [
-                      _buildEar(skyBlue),
+                      _buildEar(AppColors.skyBlue),
                       const SizedBox(width: 4),
-                      _buildEar(skyBlue),
+                      _buildEar(AppColors.skyBlue),
                     ],
                   ),
                 ),
@@ -167,8 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            
-            // --- Card Statistik ---
+
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -192,10 +182,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           Text(
                             '$screenTimeHours Jam',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w900,
-                              color: primaryBlue,
+                              color: AppColors.primaryBlue,
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -209,7 +199,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: progress,
                         strokeWidth: 10,
                         backgroundColor: Colors.grey.shade100,
-                        valueColor: AlwaysStoppedAnimation<Color>(tealMint),
+                        valueColor: const AlwaysStoppedAnimation<Color>(AppColors.tealMint),
                         strokeCap: StrokeCap.round,
                       ),
                     ],
@@ -227,7 +217,6 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             const SizedBox(height: 24),
 
-            // --- Switch List Tile ---
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
@@ -243,7 +232,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 subtitle: const Text('Pop-up pengingat tiap 2 jam aktif'),
                 value: _isBreakSessionActive,
-                activeThumbColor: tealMint,
+                activeThumbColor: AppColors.tealMint,
                 onChanged: (val) {
                   setState(() => _isBreakSessionActive = val);
                 },
@@ -256,8 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            
-            // --- Grid Action Cards ---
+
             GridView.count(
               crossAxisCount: 2,
               shrinkWrap: true,
@@ -268,28 +256,38 @@ class _HomeScreenState extends State<HomeScreen> {
               children: [
                 _buildActionCard(
                   icon: Icons.photo_library_outlined,
-                  color: deepCyan,
+                  color: AppColors.deepCyan,
                   title: 'Media Kustom',
                   subtitle: 'Foto/GIF Jeda',
                   onTap: () {},
                 ),
                 _buildActionCard(
                   icon: Icons.alarm,
-                  color: goldenYellow,
+                  color: AppColors.goldenYellow,
                   title: 'Alarm Jeda',
                   subtitle: 'Kelola Alarm',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const AlarmListScreen()),
+                    );
+                  },
                 ),
                 _buildActionCard(
                   icon: Icons.calendar_today_outlined,
-                  color: tealMint,
+                  color: AppColors.tealMint,
                   title: 'Jadwal Aktivitas',
                   subtitle: 'Makan/Olahraga',
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const JadwalListScreen()),
+                    );
+                  },
                 ),
                 _buildActionCard(
                   icon: Icons.bar_chart_rounded,
-                  color: skyBlue,
+                  color: AppColors.skyBlue,
                   title: 'Statistik Penuh',
                   subtitle: 'Riwayat Jeda',
                   onTap: () {},
@@ -328,7 +326,8 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            Text(value, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryBlue)),
+            const SizedBox(height: 0),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryBlue)),
           ],
         ),
       ],
@@ -364,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
             const Spacer(),
             Text(
               title,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: primaryBlue),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: AppColors.primaryBlue),
             ),
             const SizedBox(height: 2),
             Text(
