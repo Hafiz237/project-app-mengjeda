@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import 'alarm_list_screen.dart';
 import 'jadwal_list_screen.dart';
+import 'media_kustom_screen.dart';
+import 'statistik_penuh_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -254,13 +256,20 @@ class _HomeScreenState extends State<HomeScreen> {
               mainAxisSpacing: 12,
               childAspectRatio: 1.25,
               children: [
-                _buildActionCard(
-                  icon: Icons.photo_library_outlined,
-                  color: AppColors.deepCyan,
-                  title: 'Media Kustom',
-                  subtitle: 'sesuaikan bentuk notif jeda',
-                  onTap: () {},
-                ),
+                
+_buildActionCard(
+  icon: Icons.photo_library_outlined,
+  color: AppColors.deepCyan,
+  title: 'Media Kustom',
+  subtitle: 'sesuaikan bentuk notif jeda',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MediaKustomScreen()),
+    );
+  },
+),
+
                 _buildActionCard(
                   icon: Icons.alarm,
                   color: AppColors.goldenYellow,
@@ -286,12 +295,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 ),
                 _buildActionCard(
-                  icon: Icons.bar_chart_rounded,
-                  color: AppColors.skyBlue,
-                  title: 'Statistik Penuh',
-                  subtitle: 'Lihat Riwayat Jeda',
-                  onTap: () {},
-                ),
+  icon: Icons.bar_chart_rounded,
+  color: AppColors.skyBlue,
+  title: 'Statistik Penuh',
+  subtitle: 'Lihat Riwayat Jeda',
+  onTap: () {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const StatistikPenuhScreen()),
+    );
+  },
+),
               ],
             ),
           ],
