@@ -1,17 +1,8 @@
-# project_pemmob
+# project_pemmob = Aplikasi MengJeda
 
-A new Flutter project.
-
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+NAMA KELOMPOK: AWAL BUKANLAH MULA
+ANGGOTA KELOMPOK:
+Nailah Salmah
+MHD. HAFIZ
+Ahmad Zahran Syauqi
+Aplikasi ini adalah aplikasi yang membantu orang2 untuk mengurangi waktu screen time Gadget dengan cara membuat suatu sesi jeda dan bentuk notifikasi yang dapat di custom yang menghalangi layar pandang gadget sehingga orang bisa berhenti sementara menggunakan gadget, selain itu ada fitur jadwal aktivitas, alarm pengingat, dan recap penggunaan jeda.
