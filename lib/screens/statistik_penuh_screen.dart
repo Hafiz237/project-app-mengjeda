@@ -6,7 +6,6 @@ class StatistikPenuhScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Data dummy (simulasi) untuk daftar riwayat
     final List<Map<String, dynamic>> riwayatMingguan = [
       {'hari': 'Senin', 'waktu_layar': '4 Jam 12 Menit', 'sesi_jeda': 3, 'status': 'Over limit'},
       {'hari': 'Selasa', 'waktu_layar': '2 Jam 45 Menit', 'sesi_jeda': 4, 'status': 'Sehat'},

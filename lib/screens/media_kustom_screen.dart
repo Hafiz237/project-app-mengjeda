@@ -196,7 +196,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
                         fit: StackFit.expand,
                         children: [
                           _buildThumb(media),
-                          // Label nama di bagian bawah
                           Positioned(
                             left: 0,
                             right: 0,
