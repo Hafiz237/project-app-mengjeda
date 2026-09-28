@@ -4,7 +4,7 @@ import '../theme/app_colors.dart';
 class MediaModel {
   final String id;
   final String nama;
-  final String? filePath; // null = media contoh (placeholder), terisi = hasil unggah
+  final String? filePath;
   final IconData icon;
   final Color color;
 

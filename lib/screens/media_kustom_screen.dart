@@ -43,7 +43,7 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
   Future<void> _uploadMedia() async {
     try {
       final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
-      if (picked == null) return; // pengguna membatalkan
+      if (picked == null) return;
 
       final media = MediaModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -61,7 +61,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
   }
 
   Future<void> _deleteMedia(MediaModel media) async {
-    // Validasi: media yang sedang aktif tidak boleh dihapus
     if (media.id == _activeId) {
       _showMessage('Media yang sedang dipakai tidak bisa dihapus. Pilih media lain dulu.');
       return;
@@ -87,7 +86,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
     }
   }
 
-  // Menampilkan gambar: file asli kalau hasil unggah, kotak berwarna kalau media contoh
   Widget _buildThumb(MediaModel media) {
     if (media.isUploaded) {
       return Image.file(
@@ -122,7 +120,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
       ),
       body: Column(
         children: [
-          // Pratinjau media yang sedang aktif
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Container(
@@ -215,7 +212,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
                               ),
                             ),
                           ),
-                          // Tanda centang untuk media aktif
                           if (isActive)
                             const Positioned(
                               top: 8,
@@ -226,7 +222,6 @@ class _MediaKustomScreenState extends State<MediaKustomScreen> {
                                 child: Icon(Icons.check, size: 16, color: Colors.white),
                               ),
                             ),
-                          // Tombol hapus
                           Positioned(
                             top: 4,
                             right: 4,

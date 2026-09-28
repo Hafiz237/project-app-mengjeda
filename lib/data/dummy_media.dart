@@ -10,5 +10,4 @@ List<MediaModel> dummyMedia = [
   MediaModel(id: 'm5', nama: 'Pesan Rehat', icon: Icons.spa, color: AppColors.primaryBlue),
 ];
 
-// Menyimpan media yang sedang dipakai untuk pop-up jeda (simulasi, tanpa backend)
 String activeMediaId = 'm1';
