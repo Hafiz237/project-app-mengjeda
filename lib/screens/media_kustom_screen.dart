@@ -1,4 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import '../models/media_model.dart';
+import '../data/dummy_media.dart';
+import '../theme/app_colors.dart';
 
 class MediaKustomScreen extends StatefulWidget {
   const MediaKustomScreen({super.key});
@@ -8,223 +13,245 @@ class MediaKustomScreen extends StatefulWidget {
 }
 
 class _MediaKustomScreenState extends State<MediaKustomScreen> {
-  String _selectedTone = 'Lonceng';
-  double _volume = 0.7;
-  
-  // Variabel untuk menyimpan warna yang dipilih (bawaan merah)
-  Color _selectedColor = Colors.red.shade600; 
+  final ImagePicker _picker = ImagePicker();
+  late List<MediaModel> _mediaList;
+  late String _activeId;
 
-  final List<Map<String, dynamic>> _tones = [
-    {'name': 'Hening', 'icon': Icons.volume_off},
-    {'name': 'Lonceng', 'icon': Icons.notifications_active},
-    {'name': 'Hutan', 'icon': Icons.park},
-    {'name': 'Musik Santai', 'icon': Icons.music_note},
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _mediaList = dummyMedia;
+    _activeId = activeMediaId;
+  }
 
-  final List<Color> _themeColors = [
-    Colors.red.shade400,
-    Colors.red.shade500,
-    Colors.red.shade600,
-    Colors.red.shade800,
-    Colors.red.shade900,
-    Colors.pink.shade300,
-    Colors.brown.shade800,
-    Colors.pink.shade100,
-    Colors.red.shade100,
-    Colors.grey.shade400,
-  ];
+  MediaModel get _activeMedia => _mediaList.firstWhere((m) => m.id == _activeId);
+
+  void _showMessage(String text) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(text)));
+  }
+
+  void _selectMedia(MediaModel media) {
+    setState(() {
+      _activeId = media.id;
+      activeMediaId = media.id;
+    });
+    _showMessage('"${media.nama}" dipakai untuk pop-up jeda');
+  }
+
+  Future<void> _uploadMedia() async {
+    try {
+      final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+      if (picked == null) return; // pengguna membatalkan
+
+      final media = MediaModel(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        nama: picked.name,
+        filePath: picked.path,
+        icon: Icons.image,
+        color: AppColors.deepCyan,
+      );
+      setState(() => _mediaList.add(media));
+      _showMessage('Media berhasil diunggah');
+    } catch (e) {
+      if (!mounted) return;
+      _showMessage('Gagal membuka galeri');
+    }
+  }
+
+  Future<void> _deleteMedia(MediaModel media) async {
+    // Validasi: media yang sedang aktif tidak boleh dihapus
+    if (media.id == _activeId) {
+      _showMessage('Media yang sedang dipakai tidak bisa dihapus. Pilih media lain dulu.');
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Media?'),
+        content: Text('"${media.nama}" akan dihapus dari daftar.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      setState(() => _mediaList.removeWhere((m) => m.id == media.id));
+    }
+  }
+
+  // Menampilkan gambar: file asli kalau hasil unggah, kotak berwarna kalau media contoh
+  Widget _buildThumb(MediaModel media) {
+    if (media.isUploaded) {
+      return Image.file(
+        File(media.filePath!),
+        fit: BoxFit.cover,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => Container(
+          color: Colors.grey.shade200,
+          child: const Icon(Icons.broken_image, color: Colors.grey),
+        ),
+      );
+    }
+    return Container(
+      color: media.color.withValues(alpha: 0.15),
+      child: Center(child: Icon(media.icon, size: 44, color: media.color)),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _selectedColor.withValues(alpha: 0.4),
-              _selectedColor,
-            ],
-          ),
+      backgroundColor: AppColors.bgColor,
+      appBar: AppBar(
+        title: const Text(
+          'Media Kustom',
+          style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primaryBlue),
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
+        backgroundColor: AppColors.bgColor,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.primaryBlue),
+      ),
+      body: Column(
+        children: [
+          // Pratinjau media yang sedang aktif
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
             child: Container(
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2), 
-                    blurRadius: 10, 
-                    offset: const Offset(0, 5)
-                  )
-                ],
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.skyBlue.withValues(alpha: 0.3), width: 2),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              child: Row(
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(14),
+                    child: SizedBox(width: 72, height: 72, child: _buildThumb(_activeMedia)),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Media Jeda (Kustomisasi)',
-                          style: TextStyle(
-                            fontSize: 20, 
-                            fontWeight: FontWeight.bold, 
-                            color: _selectedColor
-                          ),
+                        const Text(
+                          'Media Pop-up Jeda Aktif',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.skyBlue),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Halaman: MediaKustomScreen(), Tema: Kustom',
-                          style: TextStyle(
-                            fontSize: 12, 
-                            color: Colors.grey.shade600
-                          ),
+                          _activeMedia.nama,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
                         ),
                       ],
-                    ),
-                  ),
-                  Divider(color: Colors.grey.shade300, thickness: 1),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: [
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Pilih Nada Jeda', 
-                          style: TextStyle(fontWeight: FontWeight.bold)
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.volume_up, size: 40, color: _selectedColor),
-                            const SizedBox(width: 32),
-                            Icon(Icons.volume_off, size: 40, color: _selectedColor.withValues(alpha: 0.3)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        ..._tones.map((tone) {
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Icon(tone['icon'], color: _selectedColor),
-                            title: Text(tone['name']),
-                            trailing: Radio<String>(
-                              value: tone['name'],
-                              groupValue: _selectedTone,
-                              activeColor: _selectedColor,
-                              onChanged: (value) => setState(() => _selectedTone = value!),
-                            ),
-                          );
-                        }),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: _selectedColor.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Tema Warna App', 
-                                style: TextStyle(fontWeight: FontWeight.bold)
-                              ),
-                              const SizedBox(height: 12),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _themeColors.map((color) {
-                                  final isSelected = _selectedColor == color;
-                                  return GestureDetector(
-                                    onTap: () {
-                                      setState(() => _selectedColor = color);
-                                    },
-                                    child: Container(
-                                      width: 35,
-                                      height: 35,
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: isSelected ? Colors.black : Colors.grey.shade300,
-                                          width: isSelected ? 2 : 1,
-                                        ),
-                                      ),
-                                      child: isSelected 
-                                          ? const Icon(Icons.check, color: Colors.white, size: 20) 
-                                          : null,
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        const Text(
-                          'Durasi & Volume Jeda', 
-                          style: TextStyle(fontWeight: FontWeight.bold)
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(Icons.access_time, color: _selectedColor),
-                            const Spacer(),
-                            const Text(
-                              '00:00', 
-                              style: TextStyle(fontWeight: FontWeight.bold)
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Icon(Icons.volume_up, color: _selectedColor),
-                            Expanded(
-                              child: Slider(
-                                value: _volume,
-                                activeColor: _selectedColor,
-                                inactiveColor: _selectedColor.withValues(alpha: 0.2),
-                                onChanged: (val) => setState(() => _volume = val),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _selectedColor,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.pop(context, _selectedColor);
-                      },
-                      child: const Text(
-                        'Simpan & Terapkan', 
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)
-                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-        ),
+          const Padding(
+            padding: EdgeInsets.fromLTRB(16, 20, 16, 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text('Pustaka Media', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ),
+          ),
+          Expanded(
+            child: _mediaList.isEmpty
+                ? const Center(child: Text('Belum ada media. Unggah dari galeri.'))
+                : GridView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 90),
+              itemCount: _mediaList.length,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                childAspectRatio: 1,
+              ),
+              itemBuilder: (context, index) {
+                final media = _mediaList[index];
+                final isActive = media.id == _activeId;
+                return GestureDetector(
+                  onTap: () => _selectMedia(media),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isActive ? AppColors.skyBlue : Colors.transparent,
+                        width: 3,
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(17),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          _buildThumb(media),
+                          // Label nama di bagian bawah
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              color: Colors.black.withValues(alpha: 0.45),
+                              child: Text(
+                                media.nama,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(color: Colors.white, fontSize: 12),
+                              ),
+                            ),
+                          ),
+                          // Tanda centang untuk media aktif
+                          if (isActive)
+                            const Positioned(
+                              top: 8,
+                              left: 8,
+                              child: CircleAvatar(
+                                radius: 12,
+                                backgroundColor: AppColors.skyBlue,
+                                child: Icon(Icons.check, size: 16, color: Colors.white),
+                              ),
+                            ),
+                          // Tombol hapus
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child: IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 20),
+                              color: Colors.white,
+                              style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.35)),
+                              onPressed: () => _deleteMedia(media),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.deepCyan,
+        onPressed: _uploadMedia,
+        icon: const Icon(Icons.upload, color: Colors.white),
+        label: const Text('Unggah', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }
