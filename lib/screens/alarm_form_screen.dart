@@ -94,7 +94,7 @@ class _AlarmFormScreenState extends State<AlarmFormScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedTone,
+                initialValue: _selectedTone,
                 decoration: const InputDecoration(labelText: 'Nada'),
                 items: _toneOptions
                     .map((tone) => DropdownMenuItem(value: tone, child: Text(tone)))

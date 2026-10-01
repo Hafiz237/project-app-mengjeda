@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+ import 'package:flutter/material.dart';
 import '../models/jadwal_model.dart';
 import '../data/dummy_kategori.dart';
 import '../theme/app_colors.dart';
@@ -91,7 +91,7 @@ class _JadwalFormScreenState extends State<JadwalFormScreen> {
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
-                value: _selectedKategoriId,
+                initialValue: _selectedKategoriId,
                 decoration: const InputDecoration(labelText: 'Kategori'),
                 items: dummyKategori
                     .map((k) => DropdownMenuItem(
