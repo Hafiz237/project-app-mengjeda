@@ -403,24 +403,30 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.deepCyan,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 24),
+                child: FilledButton.icon(
+                  onPressed: () => _showPopupJeda(),
+                  icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
+                  label: const Text(
+                    'Coba Pop-up Sekarang',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                onPressed: _triggerJeda,
-                icon: const Icon(Icons.self_improvement),
-                label: const Text(
-                  'Mulai Jeda Sekarang',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 24),
             const Text(
               'Fitur MengJeda',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
