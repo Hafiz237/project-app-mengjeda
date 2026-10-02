@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -105,115 +106,126 @@ class _JedaPopupScreenState extends State<JedaPopupScreen>
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: Colors.black.withValues(alpha: 0.5),
-        body: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Waktunya Jeda Sejenak',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Letakkan HP-mu, istirahatkan matamu.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.75),
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  ScaleTransition(
-                    scale: Tween<double>(begin: 0.95, end: 1.05).animate(
-                      CurvedAnimation(
-                        parent: _pulseController,
-                        curve: Curves.easeInOut,
-                      ),
-                    ),
-                    child: Container(
-                      width: 260,
-                      height: 260,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: AppColors.skyBlue,
-                          width: 4,
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          fit: StackFit.expand,
+          children: [
+            BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 6, sigmaY: 6),
+              child: Container(color: Colors.black.withValues(alpha: 0.45)),
+            ),
+
+            // Konten popup
+            SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Waktunya Jeda Sejenak',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.1,
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppColors.skyBlue.withValues(alpha: 0.5),
-                            blurRadius: 30,
-                            spreadRadius: 4,
-                          ),
-                        ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: _buildMedia(),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    _format(_sisa),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 52,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Sisa waktu jeda',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
-                      fontSize: 13,
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.lock_outline,
-                          color: Colors.white70,
-                          size: 16,
+                      const SizedBox(height: 8),
+                      Text(
+                        'Letakkan HP-mu, istirahatkan matamu.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.75),
+                          fontSize: 14,
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Jeda belum selesai — tidak dapat dilewati',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.7),
-                            fontSize: 12,
+                      ),
+                      const SizedBox(height: 32),
+                      ScaleTransition(
+                        scale: Tween<double>(begin: 0.95, end: 1.05).animate(
+                          CurvedAnimation(
+                            parent: _pulseController,
+                            curve: Curves.easeInOut,
                           ),
                         ),
-                      ],
-                    ),
+                        child: Container(
+                          width: 260,
+                          height: 260,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: AppColors.skyBlue,
+                              width: 4,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.skyBlue.withValues(alpha: 0.5),
+                                blurRadius: 30,
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: _buildMedia(),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Text(
+                        _format(_sisa),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 52,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Sisa waktu jeda',
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 13,
+                        ),
+                      ),
+                      const SizedBox(height: 40),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.lock_outline,
+                              color: Colors.white70,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Jeda belum selesai — tidak dapat dilewati',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.7),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -245,9 +257,7 @@ class _JedaPopupScreenState extends State<JedaPopupScreen>
   Widget _fallback(MediaModel media) {
     return Container(
       color: media.color.withValues(alpha: 0.3),
-      child: Center(
-        child: Icon(media.icon, size: 100, color: Colors.white),
-      ),
+      child: Center(child: Icon(media.icon, size: 100, color: Colors.white)),
     );
   }
 }

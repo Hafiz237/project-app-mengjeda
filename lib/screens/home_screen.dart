@@ -95,14 +95,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showPopupJeda({Duration? durasi}) async {
-    if (!mounted) return;
-    await Navigator.of(context).push(
-      MaterialPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => JedaPopupScreen(durasi: durasi ?? JedaSettings.durasi),
-      ),
-    );
-  }
+  if (!mounted) return;
+  await Navigator.of(context).push<bool>(
+    PageRouteBuilder(
+      opaque: false,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      transitionDuration: const Duration(milliseconds: 300),
+      pageBuilder: (_, __, ___) =>
+          JedaPopupScreen(durasi: durasi ?? JedaSettings.durasi),
+      transitionsBuilder: (_, animation, __, child) =>
+          FadeTransition(opacity: animation, child: child),
+    ),
+  );
+}
 
   Future<void> _triggerJeda() async {
     final durasi = await showDialog<Duration>(
