@@ -8,6 +8,7 @@ import '../models/audio_model.dart';
 import '../data/dummy_media.dart';
 import '../data/dummy_audio.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_bottom_nav.dart';
 
 class MediaKustomScreen extends StatefulWidget {
   const MediaKustomScreen({super.key});
@@ -54,7 +55,13 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
   void _showMessage(String text) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(text)));
+      ..showSnackBar(
+        SnackBar(
+          content: Text(text),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
   }
 
   void _selectMedia(MediaModel media) {
@@ -97,7 +104,8 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
 
   Future<void> _uploadMedia() async {
     try {
-      final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
+      final XFile? picked =
+          await _picker.pickImage(source: ImageSource.gallery);
       if (picked == null) return;
 
       final media = MediaModel(
@@ -145,19 +153,20 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     }
   }
 
-  Future<void> _deleteMedia(MediaModel media) async {
-    if (media.id == _activeMediaId) {
-      _showMessage('Media yang sedang dipakai tidak bisa dihapus.');
-      return;
-    }
-
+  Future<bool> _confirmDelete(String judul, String nama) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus Media?'),
-        content: Text('"${media.nama}" akan dihapus dari daftar.'),
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(judul,
+            style: const TextStyle(
+                fontWeight: FontWeight.w800, color: AppColors.primaryBlue)),
+        content: Text('"$nama" akan dihapus dari daftar.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Hapus', style: TextStyle(color: Colors.red)),
@@ -165,8 +174,15 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
         ],
       ),
     );
+    return confirmed == true;
+  }
 
-    if (confirmed == true) {
+  Future<void> _deleteMedia(MediaModel media) async {
+    if (media.id == _activeMediaId) {
+      _showMessage('Media yang sedang dipakai tidak bisa dihapus.');
+      return;
+    }
+    if (await _confirmDelete('Hapus Media?', media.nama)) {
       setState(() => _mediaList.removeWhere((m) => m.id == media.id));
     }
   }
@@ -176,38 +192,27 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
       _showMessage('Audio yang sedang dipakai tidak bisa dihapus.');
       return;
     }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Audio?'),
-        content: Text('"${audio.nama}" akan dihapus dari daftar.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
+    if (await _confirmDelete('Hapus Audio?', audio.nama)) {
+      if (_playingAudioId == audio.id) {
+        await _player.stop();
+        _playingAudioId = null;
+      }
       setState(() => _audioList.removeWhere((a) => a.id == audio.id));
     }
   }
+ Widget _buildThumb(MediaModel media) {
+    Widget broken() => Container(
+          color: Colors.grey.shade200,
+          child: const Icon(Icons.broken_image, color: Colors.grey),
+        );
 
-  Widget _buildThumb(MediaModel media) {
     if (media.isUploaded) {
       return Image.file(
         File(media.filePath!),
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, _, _) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        ),
+        errorBuilder: (_, _, _) => broken(),
       );
     }
 
@@ -217,10 +222,7 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
         fit: BoxFit.cover,
         width: double.infinity,
         height: double.infinity,
-        errorBuilder: (_, _, _) => Container(
-          color: Colors.grey.shade200,
-          child: const Icon(Icons.broken_image, color: Colors.grey),
-        ),
+        errorBuilder: (_, _, _) => broken(),
       );
     }
 
@@ -230,24 +232,72 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     );
   }
 
+  Widget _buildBadge(String text, {Color color = AppColors.skyBlue}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmpty(IconData icon, String text) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 56, color: AppColors.skyBlue.withValues(alpha: 0.5)),
+          const SizedBox(height: 12),
+          Text(text, style: TextStyle(color: Colors.grey.shade600)),
+        ],
+      ),
+    );
+  }
+
   Widget _buildPreviewCard() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: Container(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.skyBlue.withValues(alpha: 0.3), width: 2),
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryBlue, AppColors.skyBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primaryBlue.withValues(alpha: 0.25),
+              blurRadius: 14,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: SizedBox(
-                width: 72,
-                height: 72,
-                child: _buildThumb(_activeMedia),
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(15),
+                child: SizedBox(
+                  width: 72,
+                  height: 72,
+                  child: _buildThumb(_activeMedia),
+                ),
               ),
             ),
             const SizedBox(width: 14),
@@ -255,31 +305,53 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Media Pop-up Jeda Aktif',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.skyBlue),
+                  Text(
+                    'Dipakai di pop-up jeda',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white.withValues(alpha: 0.8),
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _activeMedia.nama,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      const Icon(Icons.music_note, size: 14, color: AppColors.tealMint),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          _activeAudio.nama,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, color: AppColors.tealMint, fontWeight: FontWeight.w600),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.music_note,
+                            size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            _activeAudio.nama,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -290,88 +362,161 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     );
   }
 
-  Widget _buildMediaTab() {
-    return _mediaList.isEmpty
-        ? const Center(child: Text('Belum ada media. Unggah dari galeri.'))
-        : GridView.builder(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
-            itemCount: _mediaList.length,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1,
+  Widget _buildTabSwitcher() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+      child: Container(
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: TabBar(
+          controller: _tabController,
+          dividerColor: Colors.transparent,
+          indicatorSize: TabBarIndicatorSize.tab,
+          indicator: BoxDecoration(
+            color: AppColors.primaryBlue,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.grey.shade600,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w700),
+          tabs: const [
+            Tab(
+              height: 42,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.image_outlined, size: 18),
+                  SizedBox(width: 6),
+                  Text('Gambar'),
+                ],
+              ),
             ),
-            itemBuilder: (context, index) {
-              final media = _mediaList[index];
-              final isActive = media.id == _activeMediaId;
-              return GestureDetector(
-                onTap: () => _selectMedia(media),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isActive ? AppColors.skyBlue : Colors.transparent,
-                      width: 3,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(17),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        _buildThumb(media),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            color: Colors.black.withValues(alpha: 0.45),
-                            child: Text(
-                              media.nama,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontSize: 12),
-                            ),
-                          ),
-                        ),
-                        if (isActive)
-                          const Positioned(
-                            top: 8,
-                            left: 8,
-                            child: CircleAvatar(
-                              radius: 12,
-                              backgroundColor: AppColors.skyBlue,
-                              child: Icon(Icons.check, size: 16, color: Colors.white),
-                            ),
-                          ),
-                        Positioned(
-                          top: 4,
-                          right: 4,
-                          child: IconButton(
-                            icon: const Icon(Icons.delete_outline, size: 20),
-                            color: Colors.white,
-                            style: IconButton.styleFrom(backgroundColor: Colors.black.withValues(alpha: 0.35)),
-                            onPressed: () => _deleteMedia(media),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+            Tab(
+              height: 42,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.music_note_outlined, size: 18),
+                  SizedBox(width: 6),
+                  Text('Audio'),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaTab() {
+    if (_mediaList.isEmpty) {
+      return _buildEmpty(
+          Icons.photo_library_outlined, 'Belum ada media. Unggah dari galeri.');
+    }
+
+    return GridView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+      itemCount: _mediaList.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 1,
+      ),
+      itemBuilder: (context, index) {
+        final media = _mediaList[index];
+        final isActive = media.id == _activeMediaId;
+        return GestureDetector(
+          onTap: () => _selectMedia(media),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isActive ? AppColors.skyBlue : Colors.transparent,
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-              );
-            },
-          );
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(17),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _buildThumb(media),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(10, 18, 10, 8),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withValues(alpha: 0.6),
+                          ],
+                        ),
+                      ),
+                      child: Text(
+                        media.nama,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (isActive)
+                    Positioned(
+                      top: 8,
+                      left: 8,
+                      child: _buildBadge('Dipakai'),
+                    ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      color: Colors.white,
+                      visualDensity: VisualDensity.compact,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.black.withValues(alpha: 0.35),
+                      ),
+                      onPressed: () => _deleteMedia(media),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildAudioTab() {
     if (_audioList.isEmpty) {
-      return const Center(child: Text('Belum ada audio. Unggah dari file MP3.'));
+      return _buildEmpty(
+          Icons.library_music_outlined, 'Belum ada audio. Unggah file MP3.');
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
       itemCount: _audioList.length,
       itemBuilder: (context, index) {
         final audio = _audioList[index];
@@ -385,28 +530,51 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
           margin: const EdgeInsets.only(bottom: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: isActive ? AppColors.tealMint : Colors.grey.shade200,
-              width: isActive ? 2 : 1,
+              color: isActive ? AppColors.tealMint : Colors.transparent,
+              width: 2,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
           ),
           child: ListTile(
             onTap: () => _selectAudio(audio),
-            leading: CircleAvatar(
-              backgroundColor: isActive
-                  ? AppColors.tealMint
-                  : AppColors.tealMint.withValues(alpha: 0.15),
-              child: Icon(
-                isActive ? Icons.check : Icons.music_note,
-                color: isActive ? Colors.white : AppColors.tealMint,
+            contentPadding: const EdgeInsets.fromLTRB(10, 4, 4, 4),
+            leading: IconButton.filled(
+              onPressed: () => _playPauseAudio(audio),
+              style: IconButton.styleFrom(
+                backgroundColor: isPlaying
+                    ? AppColors.tealMint
+                    : AppColors.tealMint.withValues(alpha: 0.15),
+                foregroundColor:
+                    isPlaying ? Colors.white : AppColors.tealMint,
               ),
+              icon: Icon(isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded),
             ),
-            title: Text(
-              audio.nama,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+            title: Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    audio.nama,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryBlue,
+                    ),
+                  ),
+                ),
+                if (isActive) ...[
+                  const SizedBox(width: 8),
+                  _buildBadge('Dipakai', color: AppColors.tealMint),
+                ],
+              ],
             ),
             subtitle: Text(
               subtitle,
@@ -414,22 +582,10 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
               overflow: TextOverflow.ellipsis,
               style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
             ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: Icon(
-                    isPlaying ? Icons.stop_circle : Icons.play_circle_outline,
-                    color: AppColors.tealMint,
-                    size: 30,
-                  ),
-                  onPressed: () => _playPauseAudio(audio),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, size: 22, color: Colors.redAccent),
-                  onPressed: () => _deleteAudio(audio),
-                ),
-              ],
+            trailing: IconButton(
+              icon: const Icon(Icons.delete_outline,
+                  size: 22, color: Colors.redAccent),
+              onPressed: () => _deleteAudio(audio),
             ),
           ),
         );
@@ -444,27 +600,18 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
       appBar: AppBar(
         title: const Text(
           'Media Kustom',
-          style: TextStyle(fontWeight: FontWeight.w800, color: AppColors.primaryBlue),
+          style: TextStyle(
+              fontWeight: FontWeight.w800, color: AppColors.primaryBlue),
         ),
+        centerTitle: true,
         backgroundColor: AppColors.bgColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primaryBlue),
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primaryBlue,
-          unselectedLabelColor: Colors.grey,
-          indicatorColor: AppColors.skyBlue,
-          indicatorWeight: 3,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          tabs: const [
-            Tab(icon: Icon(Icons.image_outlined), text: 'Gambar'),
-            Tab(icon: Icon(Icons.music_note_outlined), text: 'Audio'),
-          ],
-        ),
       ),
       body: Column(
         children: [
           _buildPreviewCard(),
+          _buildTabSwitcher(),
           Expanded(
             child: TabBarView(
               controller: _tabController,
@@ -476,12 +623,16 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
           ),
         ],
       ),
+      bottomNavigationBar: const AppBottomNav(currentIndex: 1),
       floatingActionButton: AnimatedBuilder(
         animation: _tabController,
         builder: (context, _) {
           final isAudioTab = _tabController.index == 1;
           return FloatingActionButton.extended(
-            backgroundColor: isAudioTab ? AppColors.tealMint : AppColors.deepCyan,
+            backgroundColor:
+                isAudioTab ? AppColors.tealMint : AppColors.deepCyan,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16)),
             onPressed: isAudioTab ? _uploadAudio : _uploadMedia,
             icon: Icon(
               isAudioTab ? Icons.library_music : Icons.upload,
@@ -489,7 +640,8 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
             ),
             label: Text(
               isAudioTab ? 'Unggah MP3' : 'Unggah',
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: const TextStyle(
+                  color: Colors.white, fontWeight: FontWeight.bold),
             ),
           );
         },

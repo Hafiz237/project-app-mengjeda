@@ -115,7 +115,6 @@ class _JedaPopupScreenState extends State<JedaPopupScreen>
               child: Container(color: Colors.black.withValues(alpha: 0.45)),
             ),
 
-            // Konten popup
             SafeArea(
               child: Center(
                 child: Padding(

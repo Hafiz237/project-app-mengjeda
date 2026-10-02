@@ -95,51 +95,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _showPopupJeda({Duration? durasi}) async {
-  if (!mounted) return;
-  await Navigator.of(context).push<bool>(
-    PageRouteBuilder(
-      opaque: false,
-      barrierDismissible: false,
-      barrierColor: Colors.transparent,
-      transitionDuration: const Duration(milliseconds: 300),
-      pageBuilder: (_, __, ___) =>
-          JedaPopupScreen(durasi: durasi ?? JedaSettings.durasi),
-      transitionsBuilder: (_, animation, __, child) =>
-          FadeTransition(opacity: animation, child: child),
-    ),
-  );
-}
-
-  Future<void> _triggerJeda() async {
-    final durasi = await showDialog<Duration>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Pilih Durasi Jeda'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDurasiOption(context, '15 Detik', const Duration(seconds: 15)),
-              _buildDurasiOption(context, '30 Detik', const Duration(seconds: 30)),
-              _buildDurasiOption(context, '1 Menit', const Duration(minutes: 1)),
-              _buildDurasiOption(context, '2 Menit', const Duration(minutes: 2)),
-              _buildDurasiOption(context, '5 Menit', const Duration(minutes: 5)),
-              _buildDurasiOption(context, '10 Menit', const Duration(minutes: 10)),
-            ],
-          ),
-        ),
+    if (!mounted) return;
+    await Navigator.of(context).push<bool>(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: false,
+        barrierColor: Colors.transparent,
+        transitionDuration: const Duration(milliseconds: 300),
+        pageBuilder: (_, __, ___) =>
+            JedaPopupScreen(durasi: durasi ?? JedaSettings.durasi),
+        transitionsBuilder: (_, animation, __, child) =>
+            FadeTransition(opacity: animation, child: child),
       ),
-    );
-
-    if (durasi == null) return;
-    await _showPopupJeda(durasi: durasi);
-  }
-
-  Widget _buildDurasiOption(BuildContext context, String label, Duration durasi) {
-    return ListTile(
-      title: Text(label),
-      trailing: const Icon(Icons.timer_outlined),
-      onTap: () => Navigator.pop(context, durasi),
     );
   }
 
@@ -154,6 +121,70 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _onMenuSelected(int index) {
+    final Widget? tujuan = switch (index) {
+      1 => const MediaKustomScreen(),
+      2 => const AlarmListScreen(),
+      3 => const JadwalListScreen(),
+      4 => const StatistikPenuhScreen(),
+      _ => null,
+    };
+    if (tujuan == null) return;
+    Navigator.push(context, MaterialPageRoute(builder: (_) => tujuan));
+  }
+
+  Widget _buildBottomMenu() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryBlue.withValues(alpha: 0.08),
+            blurRadius: 16,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: NavigationBar(
+          selectedIndex: 0,
+          onDestinationSelected: _onMenuSelected,
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+          elevation: 0,
+          height: 68,
+          indicatorColor: AppColors.tealMint.withValues(alpha: 0.18),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded, color: AppColors.tealMint),
+              label: 'Beranda',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.photo_library_outlined),
+              label: 'Media',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.alarm),
+              label: 'Alarm',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.calendar_today_outlined),
+              label: 'Jadwal',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_rounded),
+              label: 'Statistik',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenTimeHours = (_screenTimeMinutes / 60).toStringAsFixed(1);
@@ -161,6 +192,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.bgColor,
+      bottomNavigationBar: _buildBottomMenu(),
       appBar: AppBar(
         title: Row(
           mainAxisSize: MainAxisSize.min,
@@ -318,8 +350,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         value: progress,
                         strokeWidth: 10,
                         backgroundColor: Colors.grey.shade100,
-                        valueColor:
-                            const AlwaysStoppedAnimation<Color>(AppColors.tealMint),
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                            AppColors.tealMint),
                         strokeCap: StrokeCap.round,
                       ),
                     ],
@@ -328,7 +360,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetricItem(Icons.timer_outlined, 'Sesi Jeda', '4 Kali'),
+                      _buildMetricItem(
+                          Icons.timer_outlined, 'Sesi Jeda', '4 Kali'),
                       _buildMetricItem(
                           Icons.hourglass_top, 'Jeda Berikutnya', '25 Menit'),
                     ],
@@ -370,7 +403,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        JedaSettings.otomatisAktif ? Icons.timer : Icons.timer_off,
+                        JedaSettings.otomatisAktif
+                            ? Icons.timer
+                            : Icons.timer_off,
                         color: Colors.white,
                         size: 28,
                       ),
@@ -401,7 +436,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         ],
                       ),
                     ),
-                    const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 18),
+                    const Icon(Icons.arrow_forward_ios,
+                        color: Colors.white, size: 18),
                   ],
                 ),
               ),
@@ -409,97 +445,28 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 24),
             SizedBox(
               width: double.infinity,
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: FilledButton.icon(
-                  onPressed: () => _showPopupJeda(),
-                  icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
-                  label: const Text(
-                    'Coba Pop-up Sekarang',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
+              child: FilledButton.icon(
+                onPressed: () => _showPopupJeda(),
+                icon: const Icon(Icons.play_circle_fill_rounded, size: 20),
+                label: const Text(
+                  'Coba Pop-up Sekarang',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
                   ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 0,
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                  elevation: 0,
                 ),
               ),
             ),
-            const Text(
-              'Fitur MengJeda',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            GridView.count(
-              crossAxisCount: 2,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.25,
-              children: [
-                _buildActionCard(
-                  icon: Icons.photo_library_outlined,
-                  color: AppColors.deepCyan,
-                  title: 'Media Kustom',
-                  subtitle: 'atur gambar & suara jeda',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const MediaKustomScreen()),
-                    );
-                  },
-                ),
-                _buildActionCard(
-                  icon: Icons.alarm,
-                  color: AppColors.goldenYellow,
-                  title: 'Alarm Jeda',
-                  subtitle: 'Kelola Alarm',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AlarmListScreen()),
-                    );
-                  },
-                ),
-                _buildActionCard(
-                  icon: Icons.calendar_today_outlined,
-                  color: AppColors.tealMint,
-                  title: 'Jadwal Aktivitas',
-                  subtitle: 'kelola jadwal aktivitas',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const JadwalListScreen()),
-                    );
-                  },
-                ),
-                _buildActionCard(
-                  icon: Icons.bar_chart_rounded,
-                  color: AppColors.skyBlue,
-                  title: 'Statistik Penuh',
-                  subtitle: 'Lihat Riwayat Jeda',
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const StatistikPenuhScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
+            const SizedBox(height: 8),
           ],
         ),
       ),
@@ -533,7 +500,6 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Text(title,
                 style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-            const SizedBox(height: 0),
             Text(
               value,
               style: const TextStyle(
@@ -544,53 +510,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ],
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required Color color,
-    required String title,
-    required String subtitle,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircleAvatar(
-              radius: 20,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, color: color, size: 22),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                  color: AppColors.primaryBlue),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
     );
   }
 }
