@@ -4,6 +4,7 @@ import '../data/dummy_alarms.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'alarm_form_screen.dart';
+import 'package:project_pemmob/services/notification_service.dart';
 
 class AlarmListScreen extends StatefulWidget {
   const AlarmListScreen({super.key});
@@ -41,10 +42,10 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
     );
   }
 
-void _toggleAlarm(String id, bool value) {
-    setState(() {
-      _alarms.firstWhere((a) => a.id == id).isActive = value;
-    });
+  void _toggleAlarm(String id, bool value) {
+    final alarm = _alarms.firstWhere((a) => a.id == id);
+    setState(() => alarm.isActive = value);
+    NotificationService.instance.scheduleAlarm(alarm); // aktif = jadwalkan, nonaktif = batalkan
   }
 
   Future<void> _addAlarm() async {
@@ -54,6 +55,7 @@ void _toggleAlarm(String id, bool value) {
     );
     if (result != null && mounted) {
       setState(() => _alarms.add(result));
+      NotificationService.instance.scheduleAlarm(result);
     }
   }
 
@@ -68,6 +70,7 @@ void _toggleAlarm(String id, bool value) {
         final index = _alarms.indexWhere((a) => a.id == result.id);
         if (index != -1) _alarms[index] = result;
       });
+      NotificationService.instance.scheduleAlarm(result); // ID sama, jadwal lama otomatis tertimpa
     }
   }
 
@@ -98,6 +101,7 @@ void _toggleAlarm(String id, bool value) {
 
   void _deleteAlarm(String id) {
     setState(() => _alarms.removeWhere((a) => a.id == id));
+    NotificationService.instance.cancelAlarm(id);
   }
 
  Widget _buildSummaryCard() {
@@ -361,6 +365,19 @@ void _toggleAlarm(String id, bool value) {
           style: TextStyle(
               fontWeight: FontWeight.w800, color: AppColors.primaryBlue),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active_outlined),
+            tooltip: 'Tes notifikasi 10 detik',
+            onPressed: () async {
+              await NotificationService.instance.scheduleTest(const Duration(seconds: 10));
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Notifikasi muncul 10 detik lagi. Tutup aplikasinya!')),
+              );
+            },
+          ),
+        ],
         centerTitle: true,
         backgroundColor: AppColors.bgColor,
         elevation: 0,

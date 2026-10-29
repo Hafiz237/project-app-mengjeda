@@ -10,6 +10,7 @@ import 'media_kustom_screen.dart';
 import 'statistik_penuh_screen.dart';
 import 'jeda_popup_screen.dart';
 import 'pengaturan_jeda_screen.dart';
+import 'package:project_pemmob/services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -40,6 +41,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _pickRandomMotivation();
     _startAutoJeda();
     _startJadwalChecker();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NotificationService.instance.requestPermissions();
+    });
   }
 
   @override
