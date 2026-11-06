@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import '../models/alarm_model.dart';
-import '../data/dummy_alarms.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'alarm_form_screen.dart';
 import 'package:project_pemmob/services/notification_service.dart';
+import '../data/database_helper.dart';
 
 class AlarmListScreen extends StatefulWidget {
   const AlarmListScreen({super.key});
@@ -16,12 +16,23 @@ class AlarmListScreen extends StatefulWidget {
 class _AlarmListScreenState extends State<AlarmListScreen> {
   static const int _navIndex = 2;
 
-  late List<AlarmModel> _alarms;
+  List<AlarmModel> _alarms = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _alarms = dummyAlarms;
+    _loadAlarms();
+  }
+
+  Future<void> _loadAlarms() async {
+    final data = await DatabaseHelper.instance.getAlarms();
+    if (mounted) {
+      setState(() {
+        _alarms = data;
+        _isLoading = false;
+      });
+    }
   }
 
   int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
@@ -42,10 +53,11 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
     );
   }
 
-  void _toggleAlarm(String id, bool value) {
+  void _toggleAlarm(String id, bool value) async {
     final alarm = _alarms.firstWhere((a) => a.id == id);
     setState(() => alarm.isActive = value);
-    NotificationService.instance.scheduleAlarm(alarm); // aktif = jadwalkan, nonaktif = batalkan
+    await DatabaseHelper.instance.updateAlarm(alarm);
+    NotificationService.instance.scheduleAlarm(alarm);
   }
 
   Future<void> _addAlarm() async {
@@ -54,7 +66,8 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
       MaterialPageRoute(builder: (context) => const AlarmFormScreen()),
     );
     if (result != null && mounted) {
-      setState(() => _alarms.add(result));
+      await DatabaseHelper.instance.insertAlarm(result);
+      _loadAlarms();
       NotificationService.instance.scheduleAlarm(result);
     }
   }
@@ -66,11 +79,9 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
           builder: (context) => AlarmFormScreen(existingAlarm: alarm)),
     );
     if (result != null && mounted) {
-      setState(() {
-        final index = _alarms.indexWhere((a) => a.id == result.id);
-        if (index != -1) _alarms[index] = result;
-      });
-      NotificationService.instance.scheduleAlarm(result); // ID sama, jadwal lama otomatis tertimpa
+      await DatabaseHelper.instance.updateAlarm(result);
+      _loadAlarms();
+      NotificationService.instance.scheduleAlarm(result);
     }
   }
 
@@ -99,12 +110,13 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
     return confirmed ?? false;
   }
 
-  void _deleteAlarm(String id) {
-    setState(() => _alarms.removeWhere((a) => a.id == id));
+  void _deleteAlarm(String id) async {
+    await DatabaseHelper.instance.deleteAlarm(id);
+    _loadAlarms();
     NotificationService.instance.cancelAlarm(id);
   }
 
- Widget _buildSummaryCard() {
+  Widget _buildSummaryCard() {
     final next = _nextAlarm;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -353,9 +365,16 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
     );
   }
 
-@override
+  @override
   Widget build(BuildContext context) {
     final sorted = _sortedAlarms;
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgColor,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bgColor,
@@ -370,10 +389,13 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
             icon: const Icon(Icons.notifications_active_outlined),
             tooltip: 'Tes notifikasi 10 detik',
             onPressed: () async {
-              await NotificationService.instance.scheduleTest(const Duration(seconds: 10));
+              await NotificationService.instance
+                  .scheduleTest(const Duration(seconds: 10));
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Notifikasi muncul 10 detik lagi. Tutup aplikasinya!')),
+                const SnackBar(
+                    content: Text(
+                        'Notifikasi muncul 10 detik lagi. Tutup aplikasinya!')),
               );
             },
           ),
@@ -402,13 +424,11 @@ class _AlarmListScreenState extends State<AlarmListScreen> {
       bottomNavigationBar: const AppBottomNav(currentIndex: _navIndex),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.skyBlue,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: _addAlarm,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Tambah',
-            style:
-                TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

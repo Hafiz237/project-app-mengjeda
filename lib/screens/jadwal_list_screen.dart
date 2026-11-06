@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../models/jadwal_model.dart';
 import '../models/kategori_model.dart';
-import '../data/dummy_jadwal.dart';
 import '../data/dummy_kategori.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'jadwal_form_screen.dart';
+import '../data/database_helper.dart';
 
 class JadwalListScreen extends StatefulWidget {
   const JadwalListScreen({super.key});
@@ -17,15 +17,27 @@ class JadwalListScreen extends StatefulWidget {
 class _JadwalListScreenState extends State<JadwalListScreen> {
   static const int _navIndex = 3;
 
-  late List<JadwalModel> _jadwalList;
+  List<JadwalModel> _jadwalList = [];
   String? _filterKategoriId;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _jadwalList = dummyJadwal;
+    _loadJadwals();
   }
-   KategoriModel _getKategori(String kategoriId) {
+
+  Future<void> _loadJadwals() async {
+    final data = await DatabaseHelper.instance.getJadwals();
+    if (mounted) {
+      setState(() {
+        _jadwalList = data;
+        _isLoading = false;
+      });
+    }
+  }
+
+  KategoriModel _getKategori(String kategoriId) {
     return dummyKategori.firstWhere(
       (k) => k.id == kategoriId,
       orElse: () => dummyKategori.first,
@@ -33,6 +45,7 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
   }
 
   int _minutes(TimeOfDay t) => t.hour * 60 + t.minute;
+
   List<JadwalModel> get _visibleList {
     final list = _jadwalList
         .where((j) =>
@@ -54,10 +67,13 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
       orElse: () => aktif.first,
     );
   }
-   void _toggleJadwal(String id, bool value) {
+
+  void _toggleJadwal(String id, bool value) async {
+    final jadwal = _jadwalList.firstWhere((j) => j.id == id);
     setState(() {
-      _jadwalList.firstWhere((j) => j.id == id).isActive = value;
+      jadwal.isActive = value;
     });
+    await DatabaseHelper.instance.updateJadwal(jadwal);
   }
 
   Future<void> _addJadwal() async {
@@ -66,7 +82,8 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
       MaterialPageRoute(builder: (context) => const JadwalFormScreen()),
     );
     if (result != null && mounted) {
-      setState(() => _jadwalList.add(result));
+      await DatabaseHelper.instance.insertJadwal(result);
+      _loadJadwals();
     }
   }
 
@@ -77,10 +94,8 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
           builder: (context) => JadwalFormScreen(existingJadwal: jadwal)),
     );
     if (result != null && mounted) {
-      setState(() {
-        final index = _jadwalList.indexWhere((j) => j.id == result.id);
-        if (index != -1) _jadwalList[index] = result;
-      });
+      await DatabaseHelper.instance.updateJadwal(result);
+      _loadJadwals();
     }
   }
 
@@ -108,10 +123,12 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
     return confirmed ?? false;
   }
 
-  void _deleteJadwal(String id) {
-    setState(() => _jadwalList.removeWhere((j) => j.id == id));
+  void _deleteJadwal(String id) async {
+    await DatabaseHelper.instance.deleteJadwal(id);
+    _loadJadwals();
   }
- Widget _buildSummaryCard() {
+
+  Widget _buildSummaryCard() {
     final next = _nextJadwal;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
@@ -233,8 +250,7 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
                 ? AppColors.primaryBlue
                 : AppColors.tealMint.withValues(alpha: 0.3),
           ),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           onSelected: (_) => setState(() => _filterKategoriId = id),
         ),
       );
@@ -400,9 +416,17 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     final visible = _visibleList;
+
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: AppColors.bgColor,
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bgColor,
@@ -436,13 +460,11 @@ class _JadwalListScreenState extends State<JadwalListScreen> {
       bottomNavigationBar: const AppBottomNav(currentIndex: _navIndex),
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.tealMint,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: _addJadwal,
         icon: const Icon(Icons.add, color: Colors.white),
         label: const Text('Tambah',
-            style:
-                TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
       ),
     );
   }

@@ -9,6 +9,7 @@ import '../data/dummy_media.dart';
 import '../data/dummy_audio.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MediaKustomScreen extends StatefulWidget {
   const MediaKustomScreen({super.key});
@@ -37,6 +38,17 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     _audioList = dummyAudio;
     _activeMediaId = activeMediaId;
     _activeAudioId = activeAudioId;
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _activeMediaId = prefs.getString('activeMediaId') ?? activeMediaId;
+        _activeAudioId = prefs.getString('activeAudioId') ?? activeAudioId;
+      });
+    }
   }
 
   @override
@@ -64,19 +76,23 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
       );
   }
 
-  void _selectMedia(MediaModel media) {
+  void _selectMedia(MediaModel media) async {
     setState(() {
       _activeMediaId = media.id;
       activeMediaId = media.id;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('activeMediaId', media.id);
     _showMessage('"${media.nama}" dipakai untuk pop-up jeda');
   }
 
-  void _selectAudio(AudioModel audio) {
+  void _selectAudio(AudioModel audio) async {
     setState(() {
       _activeAudioId = audio.id;
       activeAudioId = audio.id;
     });
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('activeAudioId', audio.id);
     _showMessage('"${audio.nama}" dipakai untuk pop-up jeda');
   }
 
@@ -200,7 +216,8 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
       setState(() => _audioList.removeWhere((a) => a.id == audio.id));
     }
   }
- Widget _buildThumb(MediaModel media) {
+
+  Widget _buildThumb(MediaModel media) {
     Widget broken() => Container(
           color: Colors.grey.shade200,
           child: const Icon(Icons.broken_image, color: Colors.grey),
@@ -555,7 +572,8 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
                 foregroundColor:
                     isPlaying ? Colors.white : AppColors.tealMint,
               ),
-              icon: Icon(isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded),
+              icon: Icon(
+                  isPlaying ? Icons.stop_rounded : Icons.play_arrow_rounded),
             ),
             title: Row(
               children: [
