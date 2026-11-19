@@ -106,9 +106,9 @@ class _HomeScreenState extends State<HomeScreen> {
         barrierDismissible: false,
         barrierColor: Colors.transparent,
         transitionDuration: const Duration(milliseconds: 300),
-        pageBuilder: (_, __, ___) =>
+        pageBuilder: (_, _, _) =>
             JedaPopupScreen(durasi: durasi ?? JedaSettings.durasi),
-        transitionsBuilder: (_, animation, __, child) =>
+        transitionsBuilder: (_, animation, _, child) =>
             FadeTransition(opacity: animation, child: child),
       ),
     );

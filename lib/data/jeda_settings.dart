@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 
 class JedaSettings {
   static Duration interval = const Duration(minutes: 2);

@@ -24,9 +24,24 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2,
       onCreate: _createDB,
+      onUpgrade: _upgradeDB,
     );
+  }
+
+  Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      await db.execute('''
+        CREATE TABLE users (
+          id TEXT PRIMARY KEY,
+          nama TEXT,
+          email TEXT UNIQUE,
+          password TEXT,
+          salt TEXT
+        )
+      ''');
+    }
   }
 
   Future<void> _createDB(Database db, int version) async {
@@ -69,6 +84,16 @@ class DatabaseHelper {
         filePath TEXT,
         assetPath TEXT,
         isActive INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE users (
+        id TEXT PRIMARY KEY,
+        nama TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        salt TEXT
       )
     ''');
 

@@ -111,7 +111,7 @@ class _JadwalFormScreenState extends State<JadwalFormScreen> {
                       borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primaryBlue.withOpacity(0.25),
+                          color: AppColors.primaryBlue.withValues(alpha: 0.25),
                           blurRadius: 16,
                           offset: const Offset(0, 8),
                         ),
@@ -188,7 +188,7 @@ class _JadwalFormScreenState extends State<JadwalFormScreen> {
                       backgroundColor: AppColors.tealMint,
                       foregroundColor: Colors.white,
                       elevation: 4,
-                      shadowColor: AppColors.tealMint.withOpacity(0.4),
+                      shadowColor: AppColors.tealMint.withValues(alpha: 0.4),
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       textStyle: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w700),

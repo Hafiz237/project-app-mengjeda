@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
+import 'login_screen.dart';
+import '../services/auth_service_locator.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -28,11 +30,26 @@ class _SplashScreenState extends State<SplashScreen>
     );
     _controller.forward();
 
-    Timer(const Duration(seconds: 3), () {
+    _checkAuth();
+  }
+
+  void _checkAuth() async {
+    await Future.delayed(const Duration(seconds: 3));
+    if (!mounted) return;
+
+    final isLoggedIn = await AuthServiceLocator.instance.isLoggedIn();
+    
+    if (!mounted) return;
+    
+    if (isLoggedIn) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    });
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    }
   }
 
   @override
@@ -66,10 +83,6 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Jeda sejenak, hidup lebih tenang',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
-              ),
             ],
           ),
         ),
