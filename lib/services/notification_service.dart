@@ -38,8 +38,6 @@ class NotificationService {
     await android?.requestExactAlarmsPermission();
   }
 
-  // ID alarm kita String, sedangkan ID notifikasi harus int 32-bit.
-  // Hash buatan sendiri supaya hasilnya selalu sama setiap aplikasi dibuka.
   int _notifId(String id) {
     var hash = 0;
     for (final unit in id.codeUnits) {
@@ -77,12 +75,10 @@ class NotificationService {
     try {
       await go(AndroidScheduleMode.exactAllowWhileIdle);
     } on PlatformException {
-      // Izin alarm presisi belum diberikan: pakai jadwal tidak presisi
       await go(AndroidScheduleMode.inexactAllowWhileIdle);
     }
   }
 
-  // Jadwalkan alarm; kalau nonaktif, jadwal lamanya dibatalkan
   Future<void> scheduleAlarm(AlarmModel alarm) async {
     await cancelAlarm(alarm.id);
     if (!alarm.isActive) return;
@@ -91,13 +87,12 @@ class NotificationService {
       title: 'Waktunya jeda',
       body: alarm.label,
       at: _nextInstanceOf(alarm.time),
-      repeat: DateTimeComponents.time, // berulang tiap hari di jam yang sama
+      repeat: DateTimeComponents.time,
     );
   }
 
   Future<void> cancelAlarm(String id) => _plugin.cancel(id: _notifId(id));
 
-  // Untuk demo: notifikasi muncul beberapa detik lagi
   Future<void> scheduleTest(Duration delay) => _zoned(
     id: 999999,
     title: 'Tes jeda MengJeda',

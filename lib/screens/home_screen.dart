@@ -9,6 +9,7 @@ import 'jadwal_list_screen.dart';
 import 'media_kustom_screen.dart';
 import 'statistik_penuh_screen.dart';
 import 'jeda_popup_screen.dart';
+import 'batas_aplikasi_screen.dart';
 import 'pengaturan_jeda_screen.dart';
 import 'package:project_pemmob/services/notification_service.dart';
 
@@ -221,6 +222,15 @@ class _HomeScreenState extends State<HomeScreen> {
         elevation: 0,
         backgroundColor: AppColors.bgColor,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.timer_rounded),
+            color: AppColors.skyBlue,
+            iconSize: 26,
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const BatasAplikasiScreen()),
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.settings_rounded),
             color: AppColors.skyBlue,
