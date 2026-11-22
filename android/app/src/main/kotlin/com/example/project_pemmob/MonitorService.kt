@@ -29,6 +29,9 @@ class MonitorService : Service() {
     private var overlayView: View? = null
     private var overlayTimer: CountDownTimer? = null
 
+    private var activeMs = 0L
+    private var autoDue = false
+
     private val tick = object : Runnable {
         override fun run() {
             try { check() } catch (_: Exception) {}
@@ -79,6 +82,8 @@ class MonitorService : Service() {
         val (usage, fg) = UsageHelper.today(this)
         if (fg == null) return
 
+        checkAuto(fg)
+
         for (i in 0 until arr.length()) {
             val o = arr.getJSONObject(i)
             if (o.getString("pkg") != fg) continue
@@ -88,7 +93,7 @@ class MonitorService : Service() {
             if (used < limitMs) return
 
             val now = System.currentTimeMillis()
-            val cooldown = if (limitMs <= 60_000L) 30_000L else COOLDOWN_MS 
+            val cooldown = if (limitMs <= 60_000L) 30_000L else COOLDOWN_MS
             if (now - (lastAlert[fg] ?: 0L) < cooldown) {
                 Log.d(TAG, "lewati: masih masa jeda pengulangan")
                 return
@@ -99,9 +104,57 @@ class MonitorService : Service() {
         }
     }
 
+    private fun checkAuto(fg: String) {
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (!prefs.getBoolean(KEY_AUTO_ON, false)) { activeMs = 0L; autoDue = false; return }
+        if (overlayView?.isAttachedToWindow == true) return
+
+        val intervalMs = prefs.getInt(KEY_AUTO_SECONDS, 7200) * 1000L
+        Log.d(TAG, "auto: fg=$fg aktif=${activeMs / 1000}s dari ${intervalMs / 1000}s due=$autoDue")
+        if (!autoDue) {
+            activeMs += CHECK_INTERVAL_MS
+            if (activeMs >= intervalMs) autoDue = true
+        }
+        if (!autoDue) return
+
+        if (isExcluded(fg)) {
+            Log.d(TAG, "jeda otomatis ditunda: $fg dikecualikan")
+            return
+        }
+        autoDue = false
+        activeMs = 0L
+        Log.d(TAG, "jeda otomatis dipicu di $fg")
+        fireAuto()
+    }
+
+    private fun isExcluded(pkg: String): Boolean {
+        val raw = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_EXCLUSIONS, "[]")
+        val arr = JSONArray(raw)
+        for (i in 0 until arr.length()) {
+            if (arr.getJSONObject(i).getString("pkg") == pkg) return true
+        }
+        return false
+    }
+
+    private fun fireAuto() {
+        val msg = "Sudah waktunya istirahat.\nLetakkan HP-mu, istirahatkan matamu."
+        if (Settings.canDrawOverlays(this)) {
+            showOverlay("", "", msg)
+        } else {
+            val n = NotificationCompat.Builder(this, CH_ALERT)
+                .setSmallIcon(applicationInfo.icon)
+                .setContentTitle("Waktunya jeda")
+                .setContentText("Sudah waktunya istirahat sejenak.")
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setAutoCancel(true)
+                .build()
+            try { getSystemService(NotificationManager::class.java).notify(7001, n) } catch (_: SecurityException) {}
+        }
+    }
+
     private fun fire(pkg: String, label: String, usedSec: Long) {
         val usedText = if (usedSec < 60) "$usedSec detik" else "${usedSec / 60} menit"
-        
+
         val open = Intent(this, MainActivity::class.java).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
@@ -127,7 +180,7 @@ class MonitorService : Service() {
         if (bisaOverlay) showOverlay(label, usedText)
     }
 
-    private fun showOverlay(label: String, usedText: String) {
+    private fun showOverlay(label: String, usedText: String, message: String? = null) {
         overlayView?.let {
             if (it.isAttachedToWindow) { Log.d(TAG, "overlay masih tampil, dilewati"); return }
             Log.d(TAG, "overlay lama sudah hilang, dibuat ulang")
@@ -144,7 +197,7 @@ class MonitorService : Service() {
             typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         }
         val sub = TextView(this).apply {
-            text = "Kamu sudah $usedText di $label hari ini.\nLetakkan HP-mu, istirahatkan matamu."
+            text = message ?: "Kamu sudah $usedText di $label hari ini.\nLetakkan HP-mu, istirahatkan matamu."
             setTextColor(0xCCFFFFFF.toInt()); textSize = 15f; gravity = Gravity.CENTER
             setPadding(0, px(12), 0, px(24))
         }
@@ -171,7 +224,7 @@ class MonitorService : Service() {
             gravity = Gravity.CENTER
             setBackgroundColor(0xF2102A3A.toInt())
             setPadding(px(24), px(24), px(24), px(24))
-            isClickable = true  menelan sentuhan agar aplikasi di bawah tidak bisa dipakai
+            isClickable = true // menelan sentuhan agar aplikasi di bawah tidak bisa dipakai
             addView(title); addView(sub); addView(paw); addView(count); addView(hint); addView(close)
         }
 
@@ -184,7 +237,7 @@ class MonitorService : Service() {
             WindowManager.LayoutParams.MATCH_PARENT,
             type,
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             PixelFormat.TRANSLUCENT
         )
         try { wm.addView(root, lp) } catch (e: Exception) {
@@ -219,6 +272,9 @@ class MonitorService : Service() {
         const val PREFS = "mengjeda_prefs"
         const val KEY_LIMITS = "limits"
         const val KEY_JEDA_SECONDS = "jeda_seconds"
+        const val KEY_EXCLUSIONS = "app_exclusions"
+        const val KEY_AUTO_ON = "auto_on"
+        const val KEY_AUTO_SECONDS = "auto_seconds"
         const val EXTRA_PKG = "jeda_pkg"
         const val EXTRA_LABEL = "jeda_label"
         const val CH_MONITOR = "mengjeda_monitor"

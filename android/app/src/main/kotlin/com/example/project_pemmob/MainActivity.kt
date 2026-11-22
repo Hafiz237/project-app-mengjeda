@@ -47,6 +47,19 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "getLimits" -> result.success(prefs.getString(MonitorService.KEY_LIMITS, "[]"))
+                "saveExclusions" -> {
+                    prefs.edit().putString(MonitorService.KEY_EXCLUSIONS, call.arguments as String).apply()
+                    result.success(null)
+                }
+                "getExclusions" -> result.success(prefs.getString(MonitorService.KEY_EXCLUSIONS, "[]"))
+                "saveAutoJeda" -> {
+                    val a = call.arguments as Map<*, *>
+                    prefs.edit()
+                        .putBoolean(MonitorService.KEY_AUTO_ON, a["on"] as Boolean)
+                        .putInt(MonitorService.KEY_AUTO_SECONDS, a["seconds"] as Int)
+                        .apply()
+                    result.success(null)
+                }
                 "getTodayUsage" -> {
                     if (!UsageHelper.hasPermission(this)) { result.success(emptyMap<String, Int>()); return@setMethodCallHandler }
                     val (usage, _) = UsageHelper.today(this)

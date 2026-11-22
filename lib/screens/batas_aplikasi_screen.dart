@@ -39,7 +39,7 @@ class _BatasAplikasiScreenState extends State<BatasAplikasiScreen>
   }
 
   Future<void> _refresh() async {
-    _svc.saveJedaDuration(JedaSettings.durasi.inSeconds);
+    _svc.syncJedaSettings();
     final r = await Future.wait([
       _svc.getLimits(),
       _svc.todayUsage(),

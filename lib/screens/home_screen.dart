@@ -12,6 +12,7 @@ import 'jeda_popup_screen.dart';
 import 'batas_aplikasi_screen.dart';
 import 'pengaturan_jeda_screen.dart';
 import 'package:project_pemmob/services/notification_service.dart';
+import '../services/app_limit_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,6 +43,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _pickRandomMotivation();
     _startAutoJeda();
     _startJadwalChecker();
+    AppLimitService.instance.syncJedaSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       NotificationService.instance.requestPermissions();
     });
@@ -66,8 +68,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _autoJedaTimer?.cancel();
     if (!JedaSettings.otomatisAktif) return;
 
-    _autoJedaTimer = Timer.periodic(JedaSettings.interval, (_) {
-      if (mounted && JedaSettings.otomatisAktif) _showPopupJeda();
+    _autoJedaTimer = Timer.periodic(JedaSettings.interval, (_) async {
+      if (!mounted || !JedaSettings.otomatisAktif) return;
+      if (await AppLimitService.instance.isMonitorOn()) return;
+      if (!mounted) return;
+      _showPopupJeda();
     });
   }
 
@@ -121,6 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
       MaterialPageRoute(builder: (_) => const PengaturanJedaScreen()),
     );
     if (saved == true) {
+      AppLimitService.instance.syncJedaSettings();
       _startAutoJeda();
       if (mounted) setState(() {});
     }

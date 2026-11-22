@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/jeda_settings.dart';
 import '../theme/app_colors.dart';
+import 'pengecualian_app_screen.dart';
 
 class PengaturanJedaScreen extends StatefulWidget {
   const PengaturanJedaScreen({super.key});
@@ -196,6 +197,48 @@ class _PengaturanJedaScreenState extends State<PengaturanJedaScreen> {
             ),
 
             const SizedBox(height: 24),
+
+            InkWell(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const PengecualianAppScreen()),
+              ),
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                      color: AppColors.tealMint.withValues(alpha: 0.3), width: 1.5),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.shield_outlined, color: AppColors.tealMint),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Aplikasi Pengecualian',
+                            style: TextStyle(
+                                fontWeight: FontWeight.bold, color: AppColors.primaryBlue),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'Jeda rutin tidak muncul saat aplikasi ini dibuka',
+                            style: TextStyle(fontSize: 11, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
 
             SizedBox(
               width: double.infinity,

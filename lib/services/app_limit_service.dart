@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
+import '../data/jeda_settings.dart';
 import '../models/app_limit_model.dart';
 
 class AppLimitService {
@@ -58,4 +59,31 @@ class AppLimitService {
       await _ch.invokeMethod<bool>('isMonitorOn') ?? false;
   Future<void> startMonitor() => _ch.invokeMethod('startMonitor');
   Future<void> stopMonitor() => _ch.invokeMethod('stopMonitor');
+
+  Future<List<InstalledApp>> getExclusions() async {
+    final raw = await _ch.invokeMethod<String>('getExclusions') ?? '[]';
+    return (jsonDecode(raw) as List)
+        .map((e) => InstalledApp(e['pkg'] as String, e['label'] as String))
+        .toList();
+  }
+
+  Future<void> saveExclusions(List<InstalledApp> apps) => _ch.invokeMethod(
+      'saveExclusions',
+      jsonEncode(apps.map((a) => {'pkg': a.pkg, 'label': a.label}).toList()));
+
+  Future<void> saveAutoJeda({required bool on, required int seconds}) =>
+      _ch.invokeMethod('saveAutoJeda', {'on': on, 'seconds': seconds});
+
+  Future<void> syncJedaSettings() async {
+    await saveJedaDuration(JedaSettings.durasi.inSeconds);
+    await saveAutoJeda(
+      on: JedaSettings.otomatisAktif,
+      seconds: JedaSettings.interval.inSeconds,
+    );
+    if (JedaSettings.otomatisAktif &&
+        await hasUsagePermission() &&
+        !await isMonitorOn()) {
+      await startMonitor();
+    }
+  }
 }
