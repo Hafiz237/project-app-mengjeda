@@ -10,6 +10,9 @@ import '../data/dummy_audio.dart';
 import '../theme/app_colors.dart';
 import '../widgets/app_bottom_nav.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart' as p;
+import 'package:path_provider/path_provider.dart';
+import '../services/app_limit_service.dart';
 
 class MediaKustomScreen extends StatefulWidget {
   const MediaKustomScreen({super.key});
@@ -58,11 +61,13 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     super.dispose();
   }
 
-  MediaModel get _activeMedia =>
-      _mediaList.firstWhere((m) => m.id == _activeMediaId);
+  MediaModel get _activeMedia => _mediaList.firstWhere(
+          (m) => m.id == _activeMediaId,
+      orElse: () => _mediaList.first);
 
-  AudioModel get _activeAudio =>
-      _audioList.firstWhere((a) => a.id == _activeAudioId);
+  AudioModel get _activeAudio => _audioList.firstWhere(
+          (a) => a.id == _activeAudioId,
+      orElse: () => _audioList.first);
 
   void _showMessage(String text) {
     ScaffoldMessenger.of(context)
@@ -83,6 +88,8 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
     });
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('activeMediaId', media.id);
+    await AppLimitService.instance.syncJedaMedia();
+    if (!mounted) return;
     _showMessage('"${media.nama}" dipakai untuk pop-up jeda');
   }
 
@@ -121,13 +128,19 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
   Future<void> _uploadMedia() async {
     try {
       final XFile? picked =
-          await _picker.pickImage(source: ImageSource.gallery);
+      await _picker.pickImage(source: ImageSource.gallery);
       if (picked == null) return;
+
+      final dir = await getApplicationDocumentsDirectory();
+      final saved = await File(picked.path).copy(
+        p.join(dir.path,
+            'jeda_${DateTime.now().millisecondsSinceEpoch}${p.extension(picked.path)}'),
+      );
 
       final media = MediaModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         nama: picked.name,
-        filePath: picked.path,
+        filePath: saved.path,
         icon: Icons.image,
         color: AppColors.deepCyan,
       );
@@ -199,6 +212,9 @@ class _MediaKustomScreenState extends State<MediaKustomScreen>
       return;
     }
     if (await _confirmDelete('Hapus Media?', media.nama)) {
+      if (media.isUploaded) {
+        try { await File(media.filePath!).delete(); } catch (_) {}
+      }
       setState(() => _mediaList.removeWhere((m) => m.id == media.id));
     }
   }

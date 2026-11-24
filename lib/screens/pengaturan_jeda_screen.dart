@@ -14,6 +14,7 @@ class _PengaturanJedaScreenState extends State<PengaturanJedaScreen> {
   late Duration _interval;
   late Duration _durasi;
   late bool _otomatisAktif;
+  late int _ukuran;
 
   final List<Duration> _intervalOptions = const [
     Duration(seconds: 30),
@@ -45,12 +46,15 @@ class _PengaturanJedaScreenState extends State<PengaturanJedaScreen> {
     _interval = JedaSettings.interval;
     _durasi = JedaSettings.durasi;
     _otomatisAktif = JedaSettings.otomatisAktif;
+    _ukuran = JedaSettings.ukuranPopupPersen;
   }
 
   void _simpan() {
     JedaSettings.interval = _interval;
     JedaSettings.durasi = _durasi;
     JedaSettings.otomatisAktif = _otomatisAktif;
+    JedaSettings.ukuranPopupPersen = _ukuran;
+    JedaSettings.save(); // simpan permanen
 
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -169,6 +173,27 @@ class _PengaturanJedaScreenState extends State<PengaturanJedaScreen> {
               labelBuilder: (d) => JedaSettings.formatDuration(d),
               color: AppColors.skyBlue,
               onChanged: (v) => setState(() => _durasi = v),
+            ),
+
+            const SizedBox(height: 24),
+            _buildSectionHeader(
+              icon: Icons.aspect_ratio,
+              title: 'Ukuran Pop-up',
+              subtitle: 'Seberapa besar pop-up menutupi layar',
+              color: AppColors.tealMint,
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 25, label: Text('Seperempat')),
+                  ButtonSegment(value: 50, label: Text('Setengah')),
+                  ButtonSegment(value: 100, label: Text('Penuh')),
+                ],
+                selected: {_ukuran},
+                onSelectionChanged: (s) => setState(() => _ukuran = s.first),
+              ),
             ),
 
             const SizedBox(height: 32),

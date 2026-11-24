@@ -22,6 +22,15 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import org.json.JSONArray
+import android.graphics.BitmapFactory
+import android.graphics.ImageDecoder
+import android.graphics.drawable.AnimatedImageDrawable
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
+import android.view.MotionEvent
+import android.widget.ImageView
+import java.io.File
 
 class MonitorService : Service() {
     private val handler = Handler(Looper.getMainLooper())
@@ -30,6 +39,7 @@ class MonitorService : Service() {
     private var overlayTimer: CountDownTimer? = null
 
     private var activeMs = 0L
+    private var logTs = 0L
     private var autoDue = false
 
     private val tick = object : Runnable {
@@ -79,7 +89,9 @@ class MonitorService : Service() {
         if (!UsageHelper.hasPermission(this)) return
         val raw = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY_LIMITS, "[]")
         val arr = JSONArray(raw)
+        val t0 = System.nanoTime()
         val (usage, fg) = UsageHelper.today(this)
+        Log.d(TAG, "today() ${(System.nanoTime() - t0) / 1_000_000} ms, fg=$fg")
         if (fg == null) return
 
         checkAuto(fg)
@@ -106,15 +118,17 @@ class MonitorService : Service() {
 
     private fun checkAuto(fg: String) {
         val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (!prefs.getBoolean(KEY_AUTO_ON, false)) { activeMs = 0L; autoDue = false; return }
+        if (!prefs.getBoolean(KEY_AUTO_ON, false)) {
+            activeMs = 0L; autoDue = false; activeSnapshot = 0L; return
+        }
         if (overlayView?.isAttachedToWindow == true) return
 
         val intervalMs = prefs.getInt(KEY_AUTO_SECONDS, 7200) * 1000L
-        Log.d(TAG, "auto: fg=$fg aktif=${activeMs / 1000}s dari ${intervalMs / 1000}s due=$autoDue")
         if (!autoDue) {
             activeMs += CHECK_INTERVAL_MS
             if (activeMs >= intervalMs) autoDue = true
         }
+        activeSnapshot = activeMs
         if (!autoDue) return
 
         if (isExcluded(fg)) {
@@ -123,8 +137,9 @@ class MonitorService : Service() {
         }
         autoDue = false
         activeMs = 0L
+        activeSnapshot = 0L
         Log.d(TAG, "jeda otomatis dipicu di $fg")
-        fireAuto()
+        fireAuto(fg)
     }
 
     private fun isExcluded(pkg: String): Boolean {
@@ -136,10 +151,10 @@ class MonitorService : Service() {
         return false
     }
 
-    private fun fireAuto() {
+    private fun fireAuto(fg: String) {
         val msg = "Sudah waktunya istirahat.\nLetakkan HP-mu, istirahatkan matamu."
         if (Settings.canDrawOverlays(this)) {
-            showOverlay("", "", msg)
+            showOverlay("", "", msg, "auto", fg)
         } else {
             val n = NotificationCompat.Builder(this, CH_ALERT)
                 .setSmallIcon(applicationInfo.icon)
@@ -177,84 +192,134 @@ class MonitorService : Service() {
 
         val bisaOverlay = Settings.canDrawOverlays(this)
         Log.d(TAG, "fire: $label, canDrawOverlays=$bisaOverlay, overlayAda=${overlayView != null}")
-        if (bisaOverlay) showOverlay(label, usedText)
+        if (bisaOverlay) showOverlay(label, usedText, null, "limit", pkg)
     }
 
-    private fun showOverlay(label: String, usedText: String, message: String? = null) {
+    private fun showOverlay(label: String, usedText: String, message: String? = null,
+                           src: String = "limit", pkg: String = "") {
         overlayView?.let {
             if (it.isAttachedToWindow) { Log.d(TAG, "overlay masih tampil, dilewati"); return }
             Log.d(TAG, "overlay lama sudah hilang, dibuat ulang")
             removeOverlay()
         }
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
-        val seconds = getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_JEDA_SECONDS, 20)
+        val seconds = prefs.getInt(KEY_JEDA_SECONDS, 20)
+        val pct = prefs.getInt(KEY_OVERLAY_PCT, 50).coerceIn(20, 100)
+        val full = pct >= 100
+        val compact = pct <= 30
         val dp = resources.displayMetrics.density
         fun px(v: Int) = (v * dp).toInt()
 
         val title = TextView(this).apply {
             text = "Waktunya Jeda Sejenak"
-            setTextColor(Color.WHITE); textSize = 26f
+            setTextColor(Color.WHITE); textSize = if (compact) 16f else 24f
             typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
         }
+        title.setOnLongClickListener { removeOverlay(); true }
+
         val sub = TextView(this).apply {
             text = message ?: "Kamu sudah $usedText di $label hari ini.\nLetakkan HP-mu, istirahatkan matamu."
-            setTextColor(0xCCFFFFFF.toInt()); textSize = 15f; gravity = Gravity.CENTER
-            setPadding(0, px(12), 0, px(24))
+            setTextColor(0xCCFFFFFF.toInt()); textSize = 14f; gravity = Gravity.CENTER
+            setPadding(0, px(8), 0, px(8))
+            visibility = if (compact) View.GONE else View.VISIBLE
         }
-        val paw = TextView(this).apply {
-            text = "🐾"; textSize = 72f; gravity = Gravity.CENTER
+
+        val drawable = loadMedia()
+        val mediaView: View = if (drawable != null) {
+            ImageView(this).apply {
+                setImageDrawable(drawable)
+                scaleType = ImageView.ScaleType.FIT_CENTER
+                if (Build.VERSION.SDK_INT >= 28 && drawable is AnimatedImageDrawable) drawable.start()
+            }
+        } else {
+            TextView(this).apply {
+                text = "🐾"; textSize = if (compact) 36f else 72f; gravity = Gravity.CENTER
+            }
         }
+
         val count = TextView(this).apply {
             text = fmt(seconds.toLong())
-            setTextColor(Color.WHITE); textSize = 56f
+            setTextColor(Color.WHITE); textSize = if (compact) 26f else 48f
             typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-            setPadding(0, px(24), 0, px(8))
+            setPadding(0, px(if (compact) 4 else 12), 0, px(4))
         }
         val hint = TextView(this).apply {
-            text = "Jeda belum selesai, tidak dapat dilewati"
-            setTextColor(0x99FFFFFF.toInt()); textSize = 13f; gravity = Gravity.CENTER
+            setTextColor(0x99FFFFFF.toInt()); textSize = if (compact) 11f else 13f
+            gravity = Gravity.CENTER
         }
         val close = Button(this).apply {
             text = "Selesai"; visibility = View.GONE
             setOnClickListener { removeOverlay() }
         }
 
+        fun startCountdown(info: String) {
+            overlayTimer?.cancel()
+            hint.text = info
+            close.visibility = View.GONE
+            count.text = fmt(seconds.toLong())
+            overlayTimer = object : CountDownTimer(seconds * 1000L, 1000L) {
+                override fun onTick(ms: Long) { count.text = fmt((ms + 999) / 1000) }
+                override fun onFinish() {
+                    JedaLog.markDone(this@MonitorService, logTs)
+                    count.text = fmt(0)
+                    hint.text = "Jeda selesai. Terima kasih!"
+                    close.visibility = View.VISIBLE
+                }
+            }.start()
+        }
+
+        var resets = 0
+        val radius = if (full) 0f else px(24).toFloat()
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
-            setBackgroundColor(0xF2102A3A.toInt())
-            setPadding(px(24), px(24), px(24), px(24))
-            isClickable = true // menelan sentuhan agar aplikasi di bawah tidak bisa dipakai
-            addView(title); addView(sub); addView(paw); addView(count); addView(hint); addView(close)
+            background = GradientDrawable().apply {
+                setColor(0xF2102A3A.toInt())
+                cornerRadii = floatArrayOf(radius, radius, radius, radius, 0f, 0f, 0f, 0f)
+            }
+            val pad = px(if (compact) 12 else 20)
+            setPadding(pad, pad, pad, if (full) pad else pad + px(16))
+            isClickable = true
+            addView(title)
+            addView(mediaView, LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f))
+            addView(sub); addView(count); addView(hint); addView(close)
+            setOnTouchListener { _, e ->
+                if (e.action == MotionEvent.ACTION_OUTSIDE && resets < MAX_RESETS) {
+                    resets++
+                    startCountdown("Jeda diulang ($resets/$MAX_RESETS): letakkan HP dulu")
+                }
+                false
+            }
         }
 
         val type = if (Build.VERSION.SDK_INT >= 26)
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else
             @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE
+        val baseFlags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        val flags = if (full) baseFlags else baseFlags or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_WATCH_OUTSIDE_TOUCH
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            type,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-            PixelFormat.TRANSLUCENT
-        )
+            if (full) WindowManager.LayoutParams.MATCH_PARENT
+            else resources.displayMetrics.heightPixels * pct / 100,
+            type, flags, PixelFormat.TRANSLUCENT
+        ).apply { gravity = Gravity.BOTTOM }
+
         try { wm.addView(root, lp) } catch (e: Exception) {
             Log.e(TAG, "Overlay gagal: $e")
             return
         }
-        Log.d(TAG, "overlay tampil")
+        Log.d(TAG, "overlay tampil ($pct%), media=${drawable != null}")
         overlayView = root
-
-        overlayTimer = object : CountDownTimer(seconds * 1000L, 1000L) {
-            override fun onTick(ms: Long) { count.text = fmt((ms + 999) / 1000) }
-            override fun onFinish() {
-                count.text = fmt(0)
-                hint.text = "Jeda selesai. Terima kasih!"
-                close.visibility = View.VISIBLE
-            }
-        }.start()
+        logTs = System.currentTimeMillis()
+        JedaLog.add(this, logTs, src, pkg, seconds)
+        startCountdown("Jeda belum selesai, tidak dapat dilewati")
     }
 
     private fun removeOverlay() {
@@ -263,6 +328,36 @@ class MonitorService : Service() {
             try { (getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(it) } catch (_: Exception) {}
         }
         overlayView = null
+    }
+
+    private fun loadMedia(): Drawable? {
+        val prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val kind = prefs.getString(KEY_MEDIA_KIND, null)
+        val path = prefs.getString(KEY_MEDIA_PATH, null)
+        if (kind.isNullOrEmpty() || path.isNullOrEmpty()) return null
+        return try {
+            if (Build.VERSION.SDK_INT >= 28) {
+                val source = if (kind == "asset")
+                    ImageDecoder.createSource(assets, "flutter_assets/$path")
+                else
+                    ImageDecoder.createSource(File(path))
+                ImageDecoder.decodeDrawable(source) { decoder, info, _ ->
+                    // perkecil gambar besar agar hemat memori (NFR-02)
+                    val scale = minOf(1f, 1080f / maxOf(info.size.width, info.size.height))
+                    decoder.setTargetSize(
+                        (info.size.width * scale).toInt(),
+                        (info.size.height * scale).toInt()
+                    )
+                }
+            } else {
+                val stream = if (kind == "asset") assets.open("flutter_assets/$path")
+                else File(path).inputStream()
+                stream.use { s -> BitmapFactory.decodeStream(s)?.let { BitmapDrawable(resources, it) } }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "media gagal dimuat: $e")
+            null
+        }
     }
 
     private fun fmt(s: Long) = "%02d:%02d".format(s / 60, s % 60)
@@ -279,7 +374,14 @@ class MonitorService : Service() {
         const val EXTRA_LABEL = "jeda_label"
         const val CH_MONITOR = "mengjeda_monitor"
         const val CH_ALERT = "mengjeda_limit_alert"
+
+        const val KEY_OVERLAY_PCT = "overlay_pct"
+        const val KEY_MEDIA_KIND = "media_kind"
+        const val KEY_MEDIA_PATH = "media_path"
+        const val MAX_RESETS = 3
         const val CHECK_INTERVAL_MS = 5_000L
         const val COOLDOWN_MS = 5 * 60_000L
+
+        @Volatile var activeSnapshot = 0L
     }
 }

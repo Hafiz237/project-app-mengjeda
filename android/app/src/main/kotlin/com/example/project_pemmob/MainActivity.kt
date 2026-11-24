@@ -79,6 +79,31 @@ class MainActivity : FlutterActivity() {
                     prefs.edit().putInt(MonitorService.KEY_JEDA_SECONDS, (call.arguments as Int)).apply()
                     result.success(null)
                 }
+                "saveJedaMedia" -> {
+                    val a = call.arguments as Map<*, *>
+                    prefs.edit()
+                        .putString(MonitorService.KEY_MEDIA_KIND, a["kind"] as String)
+                        .putString(MonitorService.KEY_MEDIA_PATH, a["path"] as String)
+                        .apply()
+                    result.success(null)
+                }
+                "getUsageSummary" -> {
+                    if (!UsageHelper.hasPermission(this)) {
+                        result.success("{\"days\":[],\"apps\":{}}")
+                    } else {
+                        result.success(UsageHelper.summary(this, call.arguments as Int))
+                    }
+                }
+                "getJedaLog" -> result.success(JedaLog.readAll(this))
+                "getAutoProgress" -> result.success(mapOf(
+                    "on" to prefs.getBoolean(MonitorService.KEY_AUTO_ON, false),
+                    "activeMs" to MonitorService.activeSnapshot,
+                    "intervalMs" to prefs.getInt(MonitorService.KEY_AUTO_SECONDS, 7200) * 1000L
+                ))
+                "saveOverlayPercent" -> {
+                    prefs.edit().putInt(MonitorService.KEY_OVERLAY_PCT, call.arguments as Int).apply()
+                    result.success(null)
+                }
                 "isMonitorOn" -> result.success(prefs.getBoolean("monitor_on", false))
                 "consumePending" -> { result.success(pending); pending = null }
                 else -> result.notImplemented()

@@ -2,6 +2,9 @@ import 'dart:convert';
 import 'package:flutter/services.dart';
 import '../data/jeda_settings.dart';
 import '../models/app_limit_model.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../data/dummy_media.dart';
+import '../models/statistik_model.dart';
 
 class AppLimitService {
   AppLimitService._();
@@ -74,16 +77,61 @@ class AppLimitService {
   Future<void> saveAutoJeda({required bool on, required int seconds}) =>
       _ch.invokeMethod('saveAutoJeda', {'on': on, 'seconds': seconds});
 
+  Future<void> saveJedaMedia({required String kind, required String path}) =>
+      _ch.invokeMethod('saveJedaMedia', {'kind': kind, 'path': path});
+
+  Future<void> saveOverlayPercent(int pct) =>
+      _ch.invokeMethod('saveOverlayPercent', pct);
+
+  Future<void> syncJedaMedia() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getString('activeMediaId') ?? activeMediaId;
+    final found = dummyMedia.where((m) => m.id == id);
+    if (found.isEmpty) return;
+    final m = found.first;
+    if (m.isUploaded) {
+      await saveJedaMedia(kind: 'file', path: m.filePath!);
+    } else if (m.isAsset) {
+      await saveJedaMedia(kind: 'asset', path: m.assetPath!);
+    } else {
+      await saveJedaMedia(kind: '', path: '');
+    }
+  }
+
   Future<void> syncJedaSettings() async {
     await saveJedaDuration(JedaSettings.durasi.inSeconds);
     await saveAutoJeda(
       on: JedaSettings.otomatisAktif,
       seconds: JedaSettings.interval.inSeconds,
     );
+    await saveOverlayPercent(JedaSettings.ukuranPopupPersen);
+    await syncJedaMedia();
     if (JedaSettings.otomatisAktif &&
         await hasUsagePermission() &&
         !await isMonitorOn()) {
       await startMonitor();
     }
+  }
+
+  Future<UsageSummary> usageSummary(int days) async {
+    final raw = await _ch.invokeMethod<String>('getUsageSummary', days) ??
+        '{"days":[],"apps":{}}';
+    return UsageSummary.fromJson(raw);
+  }
+
+  Future<List<JedaEntry>> jedaLog() async {
+    final raw = await _ch.invokeMethod<String>('getJedaLog') ?? '[]';
+    return (jsonDecode(raw) as List)
+        .map((e) => JedaEntry.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<AutoProgress> autoProgress() async {
+    final m = await _ch.invokeMapMethod<String, dynamic>('getAutoProgress') ?? {};
+    return AutoProgress(
+      m['on'] as bool? ?? false,
+      (m['activeMs'] as num?)?.toInt() ?? 0,
+      (m['intervalMs'] as num?)?.toInt() ?? 0,
+    );
   }
 }

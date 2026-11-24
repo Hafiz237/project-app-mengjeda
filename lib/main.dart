@@ -4,11 +4,13 @@ import 'screens/jeda_popup_screen.dart';
 import 'data/jeda_settings.dart';
 import 'services/app_limit_service.dart';
 import 'services/notification_service.dart';
+import 'data/jeda_settings.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await JedaSettings.load();
   debugPrint('MengJeda: main mulai');
 
   try {
@@ -17,7 +19,7 @@ void main() async {
         .timeout(const Duration(seconds: 5));
     debugPrint('MengJeda: notifikasi siap');
   } catch (e) {
-    debugPrint('MengJeda: Init notifikasi gagal: $e');
+    debugPrint('MengJeda: Init notifikasi gag al: $e');
   }
   AppLimitService.instance.onJedaRequested = (pkg, label) {
     navigatorKey.currentState?.push(

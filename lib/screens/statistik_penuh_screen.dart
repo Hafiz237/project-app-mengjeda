@@ -1,279 +1,524 @@
 import 'package:flutter/material.dart';
+import '../models/statistik_model.dart';
+import '../services/app_limit_service.dart';
 import '../theme/app_colors.dart';
-import '../widgets/app_bottom_nav.dart';
 
-class StatistikPenuhScreen extends StatelessWidget {
+class StatistikPenuhScreen extends StatefulWidget {
   const StatistikPenuhScreen({super.key});
 
-  static const int _navIndex = 4;
+  @override
+  State<StatistikPenuhScreen> createState() => _StatistikPenuhScreenState();
+}
 
-  static const List<Map<String, dynamic>> _riwayatMingguan = [
-    {'hari': 'Senin', 'waktu_layar': '4 Jam 12 Menit', 'menit': 252, 'sesi_jeda': 3, 'status': 'Over limit'},
-    {'hari': 'Selasa', 'waktu_layar': '2 Jam 45 Menit', 'menit': 165, 'sesi_jeda': 4, 'status': 'Sehat'},
-    {'hari': 'Rabu', 'waktu_layar': '3 Jam 10 Menit', 'menit': 190, 'sesi_jeda': 5, 'status': 'Normal'},
-    {'hari': 'Kamis', 'waktu_layar': '2 Jam 15 Menit', 'menit': 135, 'sesi_jeda': 4, 'status': 'Sehat'},
+class _StatistikPenuhScreenState extends State<StatistikPenuhScreen>
+    with WidgetsBindingObserver {
+  static const int _batasHarianDetik = 3 * 3600;
+  static const _hari = ['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'];
+  static const _bulan = [
+    'Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun',
+    'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'
   ];
 
-  int get _totalSesi => _riwayatMingguan.fold(
-      0, (sum, d) => sum + (d['sesi_jeda'] as int));
+  final _svc = AppLimitService.instance;
+  bool _loading = true;
+  bool _hasPermission = false;
+  UsageSummary? _summary;
+  List<JedaEntry> _log = [];
+  Map<String, String> _labels = {};
 
-  int get _rataMenit {
-    final total =
-        _riwayatMingguan.fold<int>(0, (sum, d) => sum + (d['menit'] as int));
-    return (total / _riwayatMingguan.length).round();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _load();
   }
 
-  int get _maxMenit => _riwayatMingguan
-      .map((d) => d['menit'] as int)
-      .reduce((a, b) => a > b ? a : b);
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
-  String _formatMenit(int menit) => '${menit ~/ 60}j ${menit % 60}m';
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _load();
+  }
 
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'Sehat':
-        return AppColors.tealMint;
-      case 'Normal':
-        return AppColors.goldenYellow;
-      default:
-        return Colors.red;
+  Future<void> _load() async {
+    final ok = await _svc.hasUsagePermission();
+    UsageSummary? summary;
+    Map<String, String> labels = {};
+    if (ok) {
+      summary = await _svc.usageSummary(7);
+      final apps = await _svc.installedApps();
+      labels = {for (final a in apps) a.pkg: a.label};
     }
+    final log = await _svc.jedaLog();
+    log.sort((a, b) => b.time.compareTo(a.time));
+    if (!mounted) return;
+    setState(() {
+      _hasPermission = ok;
+      _summary = summary;
+      _log = log;
+      _labels = labels;
+      _loading = false;
+    });
   }
 
-  IconData _statusIcon(String status) {
-    switch (status) {
-      case 'Sehat':
-        return Icons.check_circle_outline;
-      case 'Normal':
-        return Icons.thumb_up_alt_outlined;
-      default:
-        return Icons.warning_amber_rounded;
-    }
+  String _two(int n) => n.toString().padLeft(2, '0');
+
+  String _fmtLong(int s) {
+    if (s < 60) return '$s detik';
+    final m = s ~/ 60;
+    if (m < 60) return '$m menit';
+    final h = m ~/ 60, mm = m % 60;
+    return mm == 0 ? '$h jam' : '$h jam $mm menit';
   }
 
-  
-  Widget _buildAchievementCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppColors.primaryBlue, AppColors.skyBlue],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primaryBlue.withValues(alpha: 0.25),
-            blurRadius: 14,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.2),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.emoji_events,
-                color: Colors.white, size: 36),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Pencapaian Mingguan',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Anda berhasil melakukan $_totalSesi sesi jeda minggu ini. Lanjutkan!',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    fontSize: 13,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  String _fmtHours(int s) =>
+      '${(s / 3600).toStringAsFixed(1).replaceAll('.', ',')}j';
+
+  String _label(String pkg) =>
+      _labels[pkg] ?? (pkg.isEmpty ? '-' : pkg.split('.').last);
+
+  bool _sameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
+
+  String _statusText(int s) {
+    if (s == 0) return 'Tidak ada data';
+    if (s <= _batasHarianDetik * 0.75) return 'Sehat';
+    if (s <= _batasHarianDetik) return 'Normal';
+    return 'Melebihi batas';
   }
 
-  Widget _buildStatTile({
-    required IconData icon,
-    required Color color,
-    required String value,
-    required String label,
-  }) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
+  Color _statusColor(int s) {
+    if (s == 0) return Colors.grey;
+    if (s <= _batasHarianDetik * 0.75) return AppColors.tealMint;
+    if (s <= _batasHarianDetik) return AppColors.skyBlue;
+    return Colors.redAccent;
+  }
+
+  Widget _card({
+    required Widget child,
+    EdgeInsets padding = const EdgeInsets.all(16),
+  }) =>
+      Container(
+        width: double.infinity,
+        padding: padding,
+        margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: child,
+      );
+
+  Widget _title(String t) => Padding(
+    padding: const EdgeInsets.only(top: 4, bottom: 10),
+    child: Text(
+      t,
+      style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppColors.primaryBlue),
+    ),
+  );
+
+  Widget _statCard(IconData icon, String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: color.withValues(alpha: 0.15),
-              child: Icon(icon, size: 18, color: color),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryBlue,
-              ),
-            ),
+            Icon(icon, size: 20, color: color),
+            const SizedBox(height: 8),
+            Text(label,
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
             const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade600,
-              ),
-            ),
+            Text(value,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: AppColors.primaryBlue)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDayCard(Map<String, dynamic> data) {
-    final status = data['status'] as String;
-    final color = _statusColor(status);
-    final menit = data['menit'] as int;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: color.withValues(alpha: 0.35), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _buildPermissionCard() {
+    return _card(
+      child: Row(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.orange),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Aktifkan akses data penggunaan agar statistik screen time bisa dihitung.',
+              style: TextStyle(fontSize: 12),
+            ),
+          ),
+          TextButton(
+            onPressed: _svc.openUsageSettings,
+            child: const Text('Aktifkan'),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _bar(DayUsage d, bool isToday, int maxSec, double area) {
+    final h = maxSec == 0 ? 0.0 : (d.seconds / maxSec) * area;
+    final over = d.seconds > _batasHarianDetik;
+    final color = over
+        ? Colors.redAccent
+        : (isToday ? AppColors.skyBlue : AppColors.tealMint);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          d.seconds == 0 ? '-' : _fmtHours(d.seconds),
+          style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: (d.seconds > 0 && h < 4) ? 4 : h,
+          margin: const EdgeInsets.symmetric(horizontal: 6),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(6),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _hari[d.day.weekday - 1],
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+            color: AppColors.primaryBlue,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChart(List<DayUsage> days) {
+    const area = 110.0;
+    final maxSec = days.fold<int>(
+        _batasHarianDetik, (m, d) => d.seconds > m ? d.seconds : m);
+    return SizedBox(
+      height: area + 50,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          for (var i = 0; i < days.length; i++)
+            Expanded(child: _bar(days[i], i == days.length - 1, maxSec, area)),
+        ],
+      ),
+    );
+  }
+
+  Widget _appTile(AppUsage a, int maxSec) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              CircleAvatar(
-                backgroundColor: color.withValues(alpha: 0.15),
-                child: Icon(_statusIcon(status), color: color),
-              ),
-              const SizedBox(width: 12),
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data['hari'] as String,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Waktu layar: ${data['waktu_layar']}',
-                      style:
-                          TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
+                child: Text(_label(a.pkg),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryBlue)),
               ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.skyBlue.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      '${data['sesi_jeda']}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.primaryBlue,
-                      ),
-                    ),
-                    const Text('Jeda',
-                        style: TextStyle(
-                            fontSize: 10, color: AppColors.primaryBlue)),
-                  ],
-                ),
-              ),
+              Text(_fmtLong(a.seconds),
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
             ],
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: LinearProgressIndicator(
-                    value: menit / _maxMenit,
-                    minHeight: 8,
-                    backgroundColor: color.withValues(alpha: 0.12),
-                    valueColor: AlwaysStoppedAnimation<Color>(color),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: color,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(6),
+            child: LinearProgressIndicator(
+              value: maxSec == 0 ? 0 : a.seconds / maxSec,
+              minHeight: 8,
+              backgroundColor: Colors.grey.shade100,
+              color: AppColors.skyBlue,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _dayTile(DayUsage d, bool isToday) {
+    final jedaCount = _log.where((e) => _sameDay(e.time, d.day)).length;
+    final warna = _statusColor(d.seconds);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            decoration: BoxDecoration(
+              color: warna.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              children: [
+                Text(_hari[d.day.weekday - 1],
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                        color: warna)),
+                Text('${d.day.day}',
+                    style: TextStyle(fontSize: 11, color: warna)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  d.seconds == 0 ? 'Tidak ada data' : _fmtLong(d.seconds),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.primaryBlue),
+                ),
+                const SizedBox(height: 2),
+                Text('$jedaCount jeda${isToday ? ' · hari ini' : ''}',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: warna.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(_statusText(d.seconds),
+                style: TextStyle(
+                    fontSize: 11, fontWeight: FontWeight.w700, color: warna)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _jedaTile(JedaEntry e) {
+    final isLimit = e.source == 'limit';
+    final warna = isLimit ? AppColors.goldenYellow : AppColors.deepCyan;
+    final judul = isLimit ? 'Batas ${_label(e.pkg)}' : 'Jeda rutin';
+    final t = e.time;
+    final waktu =
+        '${_hari[t.weekday - 1]}, ${t.day} ${_bulan[t.month - 1]} · ${_two(t.hour)}:${_two(t.minute)}';
+    final di = (!isLimit && e.pkg.isNotEmpty) ? ' · di ${_label(e.pkg)}' : '';
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: warna.withValues(alpha: 0.15),
+            child: Icon(isLimit ? Icons.block : Icons.timer_outlined,
+                size: 18, color: warna),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(judul,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryBlue)),
+                const SizedBox(height: 2),
+                Text('$waktu · ${_fmtLong(e.seconds)}$di',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              ],
+            ),
+          ),
+          Icon(
+            e.done ? Icons.check_circle : Icons.warning_amber_rounded,
+            size: 20,
+            color: e.done ? AppColors.tealMint : Colors.orange,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------- bagian layar ----------
+  List<Widget> _buildUsageSections(UsageSummary s) {
+    final days = s.days;
+    final withData = days.where((d) => d.seconds > 0).toList();
+    final totalSec = withData.fold<int>(0, (a, d) => a + d.seconds);
+    final avg = withData.isEmpty ? 0 : totalSec ~/ withData.length;
+
+    DayUsage? longest;
+    for (final d in withData) {
+      if (longest == null || d.seconds > longest.seconds) longest = d;
+    }
+
+    final from = days.first.day;
+    final weekLog = _log.where((e) => !e.time.isBefore(from)).toList();
+    final doneCount = weekLog.where((e) => e.done).length;
+
+    final apps = [...s.apps]..sort((a, b) => b.seconds.compareTo(a.seconds));
+    final topApps = apps.take(5).toList();
+
+    return [
+      Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primaryBlue, AppColors.skyBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.emoji_events, color: Colors.white, size: 40),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Pencapaian Mingguan',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(
+                    weekLog.isEmpty
+                        ? 'Belum ada jeda tercatat. Riwayat mulai terisi setelah pop-up jeda muncul.'
+                        : '${weekLog.length} jeda dalam 7 hari terakhir, $doneCount selesai sampai akhir.',
+                    style: const TextStyle(color: Colors.white, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      Row(
+        children: [
+          _statCard(Icons.av_timer, 'Rata-rata harian',
+              avg == 0 ? '-' : _fmtLong(avg), AppColors.skyBlue),
+          const SizedBox(width: 8),
+          _statCard(
+              Icons.trending_up,
+              'Hari terlama',
+              longest == null
+                  ? '-'
+                  : '${_hari[longest.day.weekday - 1]} · ${_fmtHours(longest.seconds)}',
+              Colors.redAccent),
+          const SizedBox(width: 8),
+          _statCard(
+              Icons.check_circle_outline,
+              'Jeda selesai',
+              weekLog.isEmpty
+                  ? '-'
+                  : '${(doneCount * 100 / weekLog.length).round()}%',
+              AppColors.tealMint),
+        ],
+      ),
+      const SizedBox(height: 16),
+      _title('Screen Time 7 Hari'),
+      _card(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildChart(days),
+            const SizedBox(height: 8),
+            Text(
+              'Merah = melebihi batas harian ${_fmtLong(_batasHarianDetik)}. '
+                  'Angka adalah perkiraan dari waktu aplikasi di layar.',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      ),
+      _title('Aplikasi Terlama (7 hari)'),
+      _card(
+        child: topApps.isEmpty
+            ? Text('Belum ada data aplikasi.',
+            style: TextStyle(color: Colors.grey.shade600))
+            : Column(
+          children: [
+            for (final a in topApps) _appTile(a, topApps.first.seconds),
+          ],
+        ),
+      ),
+      _title('Rincian Harian'),
+      _card(
+        padding: EdgeInsets.zero,
+        child: Column(
+          children: [
+            for (var i = days.length - 1; i >= 0; i--) ...[
+              _dayTile(days[i], i == days.length - 1),
+              if (i > 0) Divider(height: 1, color: Colors.grey.shade200),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildJedaSection() {
+    final entries = _log.take(20).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _title('Riwayat Jeda'),
+        if (entries.isEmpty)
+          _card(
+            child: Text(
+              'Belum ada jeda tercatat. Riwayat mulai terisi setelah pop-up jeda muncul.',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          )
+        else
+          _card(
+            padding: EdgeInsets.zero,
+            child: Column(
+              children: [
+                for (var i = 0; i < entries.length; i++) ...[
+                  _jedaTile(entries[i]),
+                  if (i < entries.length - 1)
+                    Divider(height: 1, color: Colors.grey.shade200),
+                ],
+              ],
+            ),
+          ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 24),
+          child: Text(
+            'Centang hijau = jeda selesai sampai akhir, tanda peringatan = ditutup sebelum selesai.',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          ),
+        ),
+      ],
     );
   }
 
@@ -287,49 +532,25 @@ class StatistikPenuhScreen extends StatelessWidget {
           style: TextStyle(
               fontWeight: FontWeight.w800, color: AppColors.primaryBlue),
         ),
-        centerTitle: true,
         backgroundColor: AppColors.bgColor,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.primaryBlue),
       ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          _buildAchievementCard(),
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              _buildStatTile(
-                icon: Icons.self_improvement,
-                color: AppColors.tealMint,
-                value: '$_totalSesi',
-                label: 'Total sesi jeda',
-              ),
-              const SizedBox(width: 12),
-              _buildStatTile(
-                icon: Icons.phone_android,
-                color: AppColors.skyBlue,
-                value: _formatMenit(_rataMenit),
-                label: 'Rata-rata layar/hari',
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 12),
-            child: Text(
-              'Rincian Harian',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.primaryBlue,
-              ),
-            ),
-          ),
-          ..._riwayatMingguan.map(_buildDayCard),
-        ],
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+        onRefresh: _load,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          children: [
+            if (!_hasPermission) _buildPermissionCard(),
+            if (_summary != null && _summary!.days.isNotEmpty)
+              ..._buildUsageSections(_summary!),
+            _buildJedaSection(),
+          ],
+        ),
       ),
-      bottomNavigationBar: const AppBottomNav(currentIndex: _navIndex),
     );
   }
 }

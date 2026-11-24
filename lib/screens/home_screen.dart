@@ -31,8 +31,11 @@ class _HomeScreenState extends State<HomeScreen> {
   ];
 
   late String _activeMotivation;
-  final int _screenTimeMinutes = 135;
+  int _screenTimeSeconds = 0;
+  int _jedaHariIni = 0;
+  String _jedaBerikutnya = '-';
   final int _targetDailyMinutes = 180;
+  Timer? _statsTimer;
   Timer? _autoJedaTimer;
   Timer? _jadwalCheckTimer;
   final Set<String> _triggeredJadwalHariIni = {};
@@ -42,6 +45,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _pickRandomMotivation();
     _startAutoJeda();
+    _loadStats();
+    _statsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadStats());
     _startJadwalChecker();
     AppLimitService.instance.syncJedaSettings();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -53,6 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   void dispose() {
     _autoJedaTimer?.cancel();
     _jadwalCheckTimer?.cancel();
+    _statsTimer?.cancel();
     super.dispose();
   }
 
@@ -118,6 +124,31 @@ class _HomeScreenState extends State<HomeScreen> {
             FadeTransition(opacity: animation, child: child),
       ),
     );
+  }
+
+  Future<void> _loadStats() async {
+    final svc = AppLimitService.instance;
+    if (!await svc.hasUsagePermission()) {
+      if (mounted) setState(() => _jedaBerikutnya = 'Izin belum aktif');
+      return;
+    }
+    final summary = await svc.usageSummary(1);
+    final log = await svc.jedaLog();
+    final auto = await svc.autoProgress();
+    if (!mounted) return;
+    final now = DateTime.now();
+    setState(() {
+      _screenTimeSeconds = summary.todaySeconds;
+      _jedaHariIni = log
+          .where((e) =>
+      e.time.year == now.year &&
+          e.time.month == now.month &&
+          e.time.day == now.day)
+          .length;
+      _jedaBerikutnya = auto.on
+          ? JedaSettings.formatDuration(Duration(seconds: auto.remainingSeconds))
+          : 'Nonaktif';
+    });
   }
 
   Future<void> _bukaPengaturanJeda() async {
@@ -198,8 +229,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final screenTimeHours = (_screenTimeMinutes / 60).toStringAsFixed(1);
-    final progress = (_screenTimeMinutes / _targetDailyMinutes).clamp(0.0, 1.0);
+    final screenTimeHours = (_screenTimeSeconds / 3600).toStringAsFixed(1);
+    final progress = (_screenTimeSeconds / (_targetDailyMinutes * 60)).clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: AppColors.bgColor,
@@ -380,10 +411,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetricItem(
-                          Icons.timer_outlined, 'Sesi Jeda', '4 Kali'),
-                      _buildMetricItem(
-                          Icons.hourglass_top, 'Jeda Berikutnya', '25 Menit'),
+                      _buildMetricItem(Icons.timer_outlined, 'Sesi Jeda', '$_jedaHariIni Kali'),
+                      _buildMetricItem(Icons.hourglass_top, 'Jeda Berikutnya', _jedaBerikutnya),
                     ],
                   ),
                 ],
