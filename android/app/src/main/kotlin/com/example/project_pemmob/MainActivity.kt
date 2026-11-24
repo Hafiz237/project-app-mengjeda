@@ -104,6 +104,16 @@ class MainActivity : FlutterActivity() {
                     prefs.edit().putInt(MonitorService.KEY_OVERLAY_PCT, call.arguments as Int).apply()
                     result.success(null)
                 }
+
+                "pickMessage" -> {
+                    val m = MessageEngine.pick(this, call.arguments as String)
+                    result.success(mapOf("id" to m.id, "teks" to m.teks, "alasan" to m.alasan))
+                }
+                "saveDailyLimit" -> {
+                    prefs.edit().putInt(MonitorService.KEY_DAILY_LIMIT, call.arguments as Int).apply()
+                    result.success(null)
+                }
+
                 "isMonitorOn" -> result.success(prefs.getBoolean("monitor_on", false))
                 "consumePending" -> { result.success(pending); pending = null }
                 else -> result.notImplemented()

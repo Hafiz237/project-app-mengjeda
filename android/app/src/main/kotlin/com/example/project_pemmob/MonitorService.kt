@@ -152,9 +152,8 @@ class MonitorService : Service() {
     }
 
     private fun fireAuto(fg: String) {
-        val msg = "Sudah waktunya istirahat.\nLetakkan HP-mu, istirahatkan matamu."
         if (Settings.canDrawOverlays(this)) {
-            showOverlay("", "", msg, "auto", fg)
+            showOverlay("", "", null, "auto", fg)
         } else {
             val n = NotificationCompat.Builder(this, CH_ALERT)
                 .setSmallIcon(applicationInfo.icon)
@@ -218,8 +217,10 @@ class MonitorService : Service() {
         }
         title.setOnLongClickListener { removeOverlay(); true }
 
+        val picked = MessageEngine.pick(this, src, label, usedText)
+
         val sub = TextView(this).apply {
-            text = message ?: "Kamu sudah $usedText di $label hari ini.\nLetakkan HP-mu, istirahatkan matamu."
+            text = message ?: picked.teks
             setTextColor(0xCCFFFFFF.toInt()); textSize = 14f; gravity = Gravity.CENTER
             setPadding(0, px(8), 0, px(8))
             visibility = if (compact) View.GONE else View.VISIBLE
@@ -374,7 +375,7 @@ class MonitorService : Service() {
         const val EXTRA_LABEL = "jeda_label"
         const val CH_MONITOR = "mengjeda_monitor"
         const val CH_ALERT = "mengjeda_limit_alert"
-
+        const val KEY_DAILY_LIMIT = "daily_limit_s"
         const val KEY_OVERLAY_PCT = "overlay_pct"
         const val KEY_MEDIA_KIND = "media_kind"
         const val KEY_MEDIA_PATH = "media_path"

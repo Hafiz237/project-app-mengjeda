@@ -9,6 +9,7 @@ import java.util.Calendar
 import android.content.Intent
 import org.json.JSONArray
 import org.json.JSONObject
+
 object UsageHelper {
     fun hasPermission(ctx: Context): Boolean {
         val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
@@ -18,7 +19,10 @@ object UsageHelper {
         return mode == AppOpsManager.MODE_ALLOWED
     }
 
-
+    fun todayTotal(ctx: Context): Long {
+        val ignore = ignoredPackages(ctx)
+        return today(ctx).first.filterKeys { it !in ignore }.values.sum() / 1000
+    }
     private var dayStart = 0L
     private var lastEventTs = 0L
     private var countAtLastTs = 0

@@ -3,6 +3,7 @@ package com.example.project_pemmob
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.Calendar
 
 object JedaLog {
     private const val KEY = "jeda_log"
@@ -34,6 +35,17 @@ object JedaLog {
             if (o.getLong("ts") == ts) { o.put("done", true); break }
         }
         prefs(ctx).edit().putString(KEY, arr.toString()).apply()
+    }
+
+    fun countToday(ctx: Context): Int {
+        val start = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+        val arr = JSONArray(prefs(ctx).getString(KEY, "[]"))
+        var n = 0
+        for (i in 0 until arr.length()) if (arr.getJSONObject(i).getLong("ts") >= start) n++
+        return n
     }
 
     fun readAll(ctx: Context): String = prefs(ctx).getString(KEY, "[]") ?: "[]"
