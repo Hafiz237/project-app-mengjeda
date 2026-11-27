@@ -4,12 +4,16 @@ import 'screens/jeda_popup_screen.dart';
 import 'data/jeda_settings.dart';
 import 'services/app_limit_service.dart';
 import 'services/notification_service.dart';
-import 'data/jeda_settings.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await JedaSettings.load();
   debugPrint('MengJeda: main mulai');
 

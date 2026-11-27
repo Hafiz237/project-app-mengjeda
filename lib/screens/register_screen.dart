@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_colors.dart';
-import '../services/auth_service_locator.dart';
 import 'home_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -24,25 +25,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => _isLoading = true);
 
-    final result = await AuthServiceLocator.instance.register(
-      nama: _namaController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .set({
+        'nama': _namaController.text.trim(),
+        'email': _emailController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
-    if (result.success) {
+      if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
         (route) => false,
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message ?? 'Pendaftaran gagal')),
-      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'Pendaftaran gagal';
+      if (e.code == 'weak-password') {
+        message = 'Password terlalu lemah (minimal 6 karakter).';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'Email sudah terdaftar. Silakan login.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Format email tidak valid.';
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -193,7 +220,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
                         : const Text(
                             'Register',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

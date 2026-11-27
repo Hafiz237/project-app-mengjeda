@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../data/jeda_settings.dart';
 import '../models/app_limit_model.dart';
 import '../services/app_limit_service.dart';
 import '../theme/app_colors.dart';

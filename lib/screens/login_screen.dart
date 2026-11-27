@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_colors.dart';
-import '../services/auth_service_locator.dart';
 import 'register_screen.dart';
 import 'home_screen.dart';
 
@@ -23,23 +23,42 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    final result = await AuthServiceLocator.instance.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-
-    if (result.success) {
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result.message ?? 'Login gagal')),
-      );
+    } on FirebaseAuthException catch (e) {
+      String message = 'Login gagal';
+      if (e.code == 'user-not-found') {
+        message = 'Akun tidak ditemukan. Silakan daftar.';
+      } else if (e.code == 'wrong-password') {
+        message = 'Password salah.';
+      } else if (e.code == 'invalid-email') {
+        message = 'Format email tidak valid.';
+      } else if (e.code == 'invalid-credential') {
+        message = 'Email atau password salah.';
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -72,7 +91,11 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                
+                  const Text(
+                    'Silakan masuk untuk melanjutkan',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.grey),
+                  ),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _emailController,
@@ -139,7 +162,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     child: _isLoading
-                        ? const CircularProgressIndicator(color: Colors.white)
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
                         : const Text(
                             'Masuk',
                             style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

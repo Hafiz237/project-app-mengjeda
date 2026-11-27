@@ -9,8 +9,8 @@ import 'jadwal_list_screen.dart';
 import 'media_kustom_screen.dart';
 import 'statistik_penuh_screen.dart';
 import 'jeda_popup_screen.dart';
-import 'batas_aplikasi_screen.dart';
 import 'pengaturan_jeda_screen.dart';
+import 'profile_menu_screen.dart';
 import 'package:project_pemmob/services/notification_service.dart';
 import '../services/app_limit_service.dart';
 
@@ -141,9 +141,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _screenTimeSeconds = summary.todaySeconds;
       _jedaHariIni = log
           .where((e) =>
-      e.time.year == now.year &&
-          e.time.month == now.month &&
-          e.time.day == now.day)
+              e.time.year == now.year &&
+              e.time.month == now.month &&
+              e.time.day == now.day)
           .length;
       _jedaBerikutnya = auto.on
           ? JedaSettings.formatDuration(Duration(seconds: auto.remainingSeconds))
@@ -230,7 +230,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final screenTimeHours = (_screenTimeSeconds / 3600).toStringAsFixed(1);
-    final progress = (_screenTimeSeconds / (_targetDailyMinutes * 60)).clamp(0.0, 1.0);
+    final progress =
+        (_screenTimeSeconds / (_targetDailyMinutes * 60)).clamp(0.0, 1.0);
 
     return Scaffold(
       backgroundColor: AppColors.bgColor,
@@ -260,21 +261,20 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: AppColors.bgColor,
         actions: [
           IconButton(
-            icon: const Icon(Icons.timer_rounded),
-            color: AppColors.skyBlue,
-            iconSize: 26,
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const BatasAplikasiScreen()),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileMenuScreen()),
+              );
+            },
+            icon: const Icon(
+              Icons.person_rounded,
+              color: AppColors.primaryBlue,
+              size: 32,
             ),
+            tooltip: 'Akun & Pengaturan',
+            padding: const EdgeInsets.only(right: 16),
           ),
-          IconButton(
-            icon: const Icon(Icons.settings_rounded),
-            color: AppColors.skyBlue,
-            iconSize: 26,
-            onPressed: _bukaPengaturanJeda,
-          ),
-          const SizedBox(width: 8),
         ],
       ),
       body: SingleChildScrollView(
@@ -411,8 +411,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildMetricItem(Icons.timer_outlined, 'Sesi Jeda', '$_jedaHariIni Kali'),
-                      _buildMetricItem(Icons.hourglass_top, 'Jeda Berikutnya', _jedaBerikutnya),
+                      _buildMetricItem(Icons.timer_outlined, 'Sesi Jeda',
+                          '$_jedaHariIni Kali'),
+                      _buildMetricItem(Icons.hourglass_top, 'Jeda Berikutnya',
+                          _jedaBerikutnya),
                     ],
                   ),
                 ],

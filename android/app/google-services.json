@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "962737269637",
+    "project_id": "project-mengjeda",
+    "storage_bucket": "project-mengjeda.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:962737269637:android:d30bb3abe7f73dff1ff2ec",
+        "android_client_info": {
+          "package_name": "com.example.project_pemmob"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7l_RpPXUUXCB0oHiQvcXLL3yLWGJOUd8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
