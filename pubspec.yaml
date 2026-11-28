@@ -25,6 +25,8 @@ dependencies:
   firebase_core: ^5.2.0
   cloud_firestore: ^7.2.0
   firebase_auth: ^7.1.0
+  flutter_dotenv: ^5.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:
@@ -37,10 +39,11 @@ flutter:
   assets:
     - assets/images/
     - assets/audio/
+    - .env
 
 flutter_launcher_icons:
-    android: "launcher_icon"
-    ios: true
-    image_path: "assets/images/logofinish.png"
-    min_sdk_android: 21
-    remove_alpha_ios: true
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/images/logofinish.png"
+  min_sdk_android: 21
+  remove_alpha_ios: true

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../data/dummy_jadwal.dart';
@@ -13,6 +12,7 @@ import 'pengaturan_jeda_screen.dart';
 import 'profile_menu_screen.dart';
 import 'package:project_pemmob/services/notification_service.dart';
 import '../services/app_limit_service.dart';
+import '../services/ai_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,15 +22,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final List<String> _motivationQuotes = [
-    "Mata lelah butuh rehat sejenak nih, yuk istirahatkan pandanganmu sebentar!",
-    "Postur tubuhmu sudah tegak belum? Regangkan pundakmu dulu yuk, biar nggak pegal. ",
-    "Dunia nyata di sekitarmu tidak kalah seru dari layar kaca. ",
-    "Jeda 5 menit sekarang membuat fokusmu berlipat ganda nanti!!",
-    "Waktumu sangat berharga, gunakan dengan bijak hari ini.",
-  ];
-
-  late String _activeMotivation;
+  String _activeMotivation = "Membaca statistikmu...";
   int _screenTimeSeconds = 0;
   int _jedaHariIni = 0;
   String _jedaBerikutnya = '-';
@@ -43,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _pickRandomMotivation();
     _startAutoJeda();
     _loadStats();
     _statsTimer = Timer.periodic(const Duration(seconds: 10), (_) => _loadStats());
@@ -60,14 +51,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _jadwalCheckTimer?.cancel();
     _statsTimer?.cancel();
     super.dispose();
-  }
-
-  void _pickRandomMotivation() {
-    final random = Random();
-    setState(() {
-      _activeMotivation =
-          _motivationQuotes[random.nextInt(_motivationQuotes.length)];
-    });
   }
 
   void _startAutoJeda() {
@@ -132,11 +115,14 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) setState(() => _jedaBerikutnya = 'Izin belum aktif');
       return;
     }
+    
     final summary = await svc.usageSummary(1);
     final log = await svc.jedaLog();
     final auto = await svc.autoProgress();
     if (!mounted) return;
+    
     final now = DateTime.now();
+    
     setState(() {
       _screenTimeSeconds = summary.todaySeconds;
       _jedaHariIni = log
@@ -149,6 +135,18 @@ class _HomeScreenState extends State<HomeScreen> {
           ? JedaSettings.formatDuration(Duration(seconds: auto.remainingSeconds))
           : 'Nonaktif';
     });
+
+    final aiMessage = await AIService.generatePesan(
+      screenTimeSeconds: _screenTimeSeconds,
+      jedaHariIni: _jedaHariIni,
+      targetDailyMinutes: _targetDailyMinutes,
+    );
+
+    if (mounted) {
+      setState(() {
+        _activeMotivation = aiMessage;
+      });
+    }
   }
 
   Future<void> _bukaPengaturanJeda() async {
@@ -272,7 +270,6 @@ class _HomeScreenState extends State<HomeScreen> {
               color: AppColors.primaryBlue,
               size: 32,
             ),
-            tooltip: 'Akun & Pengaturan',
             padding: const EdgeInsets.only(right: 16),
           ),
         ],
@@ -304,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.auto_awesome,
+                      const Icon(Icons.auto_awesome,
                           color: AppColors.skyBlue, size: 28),
                       const SizedBox(width: 12),
                       Expanded(
@@ -336,7 +333,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       IconButton(
                         icon: const Icon(Icons.refresh, size: 20),
                         color: AppColors.skyBlue,
-                        onPressed: _pickRandomMotivation,
+                        onPressed: () {
+                          setState(() {
+                            _activeMotivation = "Mengganti pesan...";
+                          });
+                          _loadStats();
+                        },
                       ),
                     ],
                   ),
@@ -391,7 +393,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Dari batas harian 3.0 Jam',
+                            'Dari batas harian ${_targetDailyMinutes / 60} Jam',
                             style: TextStyle(
                                 fontSize: 13, color: Colors.grey.shade600),
                           ),
@@ -563,4 +565,5 @@ class _HomeScreenState extends State<HomeScreen> {
       ],
     );
   }
+
 }
